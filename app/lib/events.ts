@@ -113,22 +113,4 @@ export const EVENTS: EventItem[] = [
     confidence: "MED",
     updatedMinutesAgo: 31,
   },
-  {
-    id: "evt-006",
-    category: "STATE",
-    baseTitle: "Trade negotiation breakdown",
-    momentum: "DOWN",
-    region: "Asia Pacific",
-    summary: "Diplomatic channels report cooling tensions following ministerial meeting.",
-    severity: 45,
-    confidence: "HIGH",
-    updatedMinutesAgo: 95,
-  },
 ];
-
-export function sevTier(sev: number): "CRITICAL" | "ELEVATED" | "WATCH" | "MONITOR" {
-  if (sev >= 80) return "CRITICAL";
-  if (sev >= 60) return "ELEVATED";
-  if (sev >= 40) return "WATCH";
-  return "MONITOR";
-}

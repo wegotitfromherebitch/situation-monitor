@@ -1,11 +1,18 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback, type ReactNode, type CSSProperties } from 'react';
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, Shield, Globe, DollarSign, Search, ChevronRight, Activity, Clock, Zap, BadgeCheck, CircleDashed } from 'lucide-react';
-import { EVENTS, type EventItem, type Category, displayTitleFor, sevTier } from './lib/events';
+import { EVENTS, type EventItem, type Category, displayTitleFor } from './lib/events';
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
+}
+
+function sevTier(sev: number): 'CRITICAL' | 'ELEVATED' | 'WATCH' | 'MONITOR' {
+  if (sev >= 80) return 'CRITICAL';
+  if (sev >= 60) return 'ELEVATED';
+  if (sev >= 40) return 'WATCH';
+  return 'MONITOR';
 }
 
 function momentumForDelta(delta: number): "UP" | "FLAT" | "DOWN" {
@@ -209,7 +216,7 @@ function StatCard({
   label: string;
   value: string;
   trend?: { value: string; up: boolean };
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   onClick?: () => void;
 }) {
   return (
@@ -295,7 +302,7 @@ type ToastItem = { id: string; title: string; message?: string; tone: ToastTone 
 
 function Toasts({ items, onDismiss }: { items: ToastItem[]; onDismiss: (id: string) => void }) {
   return (
-    <div className="fixed bottom-5 right-5 z-[60] flex w-[360px] max-w-[92vw] flex-col gap-2">
+    <div className="fixed bottom-5 left-5 z-[60] flex w-[360px] max-w-[92vw] flex-col gap-2">
       {items.map((t) => (
         <div
           key={t.id}
@@ -357,7 +364,19 @@ type LiveSignal = {
   ts: number; // ms timestamp
 };
 
-function LiveSignalFeed({ events }: { events: EventItem[] }) {
+function LiveSignalFeed({
+  events,
+  className,
+  onSignal,
+  mode = 'panel',
+  maxCards = 5,
+}: {
+  events: EventItem[];
+  className?: string;
+  onSignal?: (signal: LiveSignal) => void;
+  mode?: 'panel' | 'ticker';
+  maxCards?: number;
+}) {
   const [signals, setSignals] = useState<LiveSignal[]>([]);
   const [isPaused, setIsPaused] = useState(false);
   const [now, setNow] = useState<number>(0); // set on client to avoid hydration mismatch
@@ -365,6 +384,7 @@ function LiveSignalFeed({ events }: { events: EventItem[] }) {
   const feedRef = useRef<HTMLDivElement>(null);
   const prevMapRef = useRef<Map<string, EventItem>>(new Map());
   const initializedRef = useRef(false);
+  const [prevTickerIds, setPrevTickerIds] = useState<string[]>([]);
 
   useEffect(() => {
     setNow(Date.now());
@@ -466,20 +486,133 @@ function LiveSignalFeed({ events }: { events: EventItem[] }) {
       newSignals.sort((a, b) => pri(a.type) - pri(b.type));
       const batch = newSignals.slice(0, 3);
 
+      // Let the map react to the highest-priority signal (tasteful pulse)
+      if (batch[0]) onSignal?.(batch[0]);
+
       setSignals((cur) => [...batch, ...cur].slice(0, 25));
       requestAnimationFrame(() => {
-        feedRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+        const el = feedRef.current;
+        if (!el) return;
+
+        // Only auto-scroll if user is already near the top
+        if (el.scrollTop < 24) {
+          el.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       });
     }
 
     prevMapRef.current = new Map(events.map((e) => [e.id, { ...e }]));
-  }, [events, isPaused]);
+  }, [events, isPaused, onSignal]);
 
+  const ticker = signals.slice(0, maxCards);
+  const tickerIds = useMemo(() => ticker.map((s) => s.id), [ticker]);
+  const CARD_W = 280; // px
+  const GAP = 10; // px
+  // Used to animate only newly-entering ticker cards (tasteful slide-in)
+  useEffect(() => {
+    setPrevTickerIds(tickerIds);
+  }, [tickerIds]);
+
+  if (mode === 'ticker') {
+    return (
+      <div className={`${className ?? ''} w-full`}
+        aria-label="Live signal ticker"
+      >
+        <div className="rounded-xl border border-zinc-800/80 bg-zinc-950/40 backdrop-blur overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-800/80 bg-zinc-900/20">
+            <div className="flex items-center gap-3">
+              <Globe className="w-3.5 h-3.5 text-emerald-400" />
+              <div className="text-[10px] tracking-[0.26em] text-zinc-500">LIVE FEED</div>
+              <div className="text-[10px] text-zinc-600 font-mono">{ticker.length}/{maxCards}</div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
+                <span className={`h-1.5 w-1.5 rounded-full ${isPaused ? 'bg-zinc-500' : 'bg-emerald-500 animate-pulse'}`} />
+                {isPaused ? 'PAUSED' : 'STREAMING'}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPaused((p) => !p)}
+                className="px-2.5 py-1 rounded text-[10px] font-mono border border-zinc-800/80 bg-zinc-950/70 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 transition-all"
+              >
+                {isPaused ? 'RESUME' : 'PAUSE'}
+              </button>
+            </div>
+          </div>
+
+          <div className="relative h-[80px] px-3 py-2 overflow-hidden">
+            {ticker.length === 0 ? (
+              <div className="h-full w-full flex items-center justify-center text-zinc-600 text-sm">Monitoring for changes…</div>
+            ) : (
+              <div className="relative h-full">
+                {ticker.map((s, idx) => {
+                  const c = cfg(s.type);
+                  const Icon = c.icon;
+                  const x = idx * (CARD_W + GAP);
+                  const isNew = !prevTickerIds.includes(s.id);
+                  const enterDelayMs = Math.min(120, idx * 28);
+                  const cardStyle: CSSProperties & { ['--ticker-x']: string } = {
+                    width: CARD_W,
+                    top: '50%',
+                    transform: `translate(${x}px, -50%)`,
+                    ['--ticker-x']: `${x}px`,
+                    transition: 'transform 260ms ease, opacity 260ms ease',
+                    animation: isNew ? `tickerIn 220ms ease-out ${enterDelayMs}ms both` : undefined,
+                  };
+
+                  return (
+                    <div
+                      key={s.id}
+                      className={`absolute left-0 rounded-lg border ${c.bg} ${c.border} shadow-[0_0_0_1px_rgba(255,255,255,0.03)]`}
+                      style={cardStyle}
+                    >
+                      <div className="p-2.5">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-3 min-w-0 flex-1">
+                            <div className="p-1.5 rounded bg-zinc-950/50">
+                              <Icon className={`w-3.5 h-3.5 ${c.color}`} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className={`text-[10px] font-mono tracking-wider ${c.color}`}>{c.label}</span>
+                                {typeof s.delta === 'number' && (
+                                  <span className={`text-[10px] font-mono ${c.color}`}>{s.delta > 0 ? '+' : ''}{s.delta}</span>
+                                )}
+                                <span className="text-[10px] text-zinc-700">•</span>
+                                <span className="text-[10px] text-zinc-500 font-mono truncate">{s.event.region}</span>
+                              </div>
+                              <div className="text-[12px] text-zinc-200 leading-tight truncate">{displayTitleFor(s.event)}</div>
+                              <div className="mt-1 flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
+                                <span>SEV {s.event.severity}</span>
+                                <span className="text-zinc-700">•</span>
+                                <span className={c.color}>{relTime(s.ts)} ago</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className={`h-2 w-2 rounded-full ${c.pulse} animate-pulse`} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Fade edges for a clean ticker window */}
+                <div className="pointer-events-none absolute inset-y-0 left-0 w-10 bg-gradient-to-r from-zinc-950/90 to-transparent" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-zinc-950/90 to-transparent" />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default: existing panel mode
   return (
-    <div className="mb-6 rounded-xl border border-zinc-800 bg-zinc-950/40 overflow-hidden">
+    <div className={`${className ?? 'mb-6'} rounded-xl border border-zinc-800 bg-zinc-950/40 overflow-hidden`}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/30">
         <div className="flex items-center gap-3">
-          <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
+          <Globe className="w-4 h-4 text-emerald-400" />
           <div>
             <div className="text-sm font-semibold text-zinc-100">LIVE SIGNAL FEED</div>
             <div className="text-[10px] text-zinc-500 font-mono">Delta stream · max 3 per sync</div>
@@ -573,73 +706,85 @@ function clamp01(n: number) {
   return Math.max(0, Math.min(1, n));
 }
 
-// Simple equirectangular projection into the 1000×520 overlay.
-// It’s not fancy like Natural Earth, but it is geo-correct enough for our stylized map.
-function projectLonLatToMap({ lon, lat }: LatLon): MapPoint {
-  // normalize
+// Simple equirectangular projection into the SVG viewBox.
+// Accepts mapW/mapH for flexible coordinate space.
+function projectLonLatToMap({ lon, lat }: LatLon, mapW: number, mapH: number): MapPoint {
   const x01 = clamp01((lon + 180) / 360);
   const y01 = clamp01((90 - lat) / 180);
 
-  // fit to our viewBox; leave tiny top/bottom margins for nicer aesthetics
-  const W = 1000;
-  const H = 520;
-  const topPad = 12;
-  const botPad = 18;
-
   return {
-    x: x01 * W,
-    y: topPad + y01 * (H - topPad - botPad),
+    x: x01 * mapW,
+    y: y01 * mapH,
   };
 }
 
-function regionToLatLon(region: string): LatLon {
-  const r = region.toLowerCase().trim();
+// While using demo data, keep pins stable (no random jitter).
+// When you switch to real geo-coded events (lat/lon per event), flip this back on.
+const PIN_JITTER_ENABLED = false;
 
-  // Countries (quick hits if you later switch region strings to country names)
-  if (r.includes('venezuela')) return { lat: 7.0, lon: -66.0 };
-  if (r.includes('colombia')) return { lat: 4.6, lon: -74.1 };
-  if (r.includes('ukraine')) return { lat: 49.0, lon: 31.0 };
-  if (r.includes('russia')) return { lat: 55.0, lon: 37.0 };
-  if (r.includes('israel')) return { lat: 31.0, lon: 35.0 };
-  if (r.includes('iran')) return { lat: 32.0, lon: 53.0 };
-  if (r.includes('china')) return { lat: 35.0, lon: 103.0 };
-  if (r.includes('taiwan')) return { lat: 23.7, lon: 121.0 };
-  if (r.includes('japan')) return { lat: 36.0, lon: 138.0 };
-  if (r.includes('korea')) return { lat: 36.5, lon: 127.8 };
-  if (r.includes('india')) return { lat: 22.0, lon: 79.0 };
-  if (r.includes('saudi')) return { lat: 24.0, lon: 45.0 };
-  if (r.includes('egypt')) return { lat: 26.8, lon: 30.8 };
-  if (r.includes('nigeria')) return { lat: 9.1, lon: 8.7 };
+const REGION_AREAS: Record<string, { center: LatLon; spread: { lat: number; lon: number } }> = {
+  // --- SECURITY HOTSPOTS ---
+  "middle east": { center: { lat: 31.5, lon: 35.0 }, spread: { lat: 6.5, lon: 10 } }, // Levant + Iraq
+  "eastern europe": { center: { lat: 49.0, lon: 31.0 }, spread: { lat: 6, lon: 10 } }, // Ukraine / region
+  "south china sea": { center: { lat: 14.0, lon: 115.0 }, spread: { lat: 7, lon: 10 } },
+  "korean peninsula": { center: { lat: 36.2, lon: 127.9 }, spread: { lat: 2.2, lon: 2.8 } },
 
-  // Regions (your current demo data)
-  if (r.includes('middle east')) return { lat: 29.5, lon: 45.0 };
-  if (r.includes('eastern europe')) return { lat: 50.2, lon: 30.5 };
-  if (r === 'europe' || r.includes('western europe')) return { lat: 48.8, lon: 8.0 };
+  // --- STATE ---
+  "south america": { center: { lat: -15.0, lon: -58.0 }, spread: { lat: 10, lon: 14 } }, // Brazil/Andes spread
+  "latin america": { center: { lat: -12.0, lon: -60.0 }, spread: { lat: 12, lon: 18 } },
+  "africa": { center: { lat: 9.0, lon: 20.0 }, spread: { lat: 14, lon: 18 } }, // Sahel-ish
+  "europe": { center: { lat: 48.5, lon: 9.0 }, spread: { lat: 8, lon: 12 } },
+  "north america": { center: { lat: 39.0, lon: -98.0 }, spread: { lat: 10, lon: 18 } }, // US-centered
 
-  if (r.includes('north america') || r.includes('u.s') || r.includes('us') || r.includes('canada')) {
-    return { lat: 39.0, lon: -98.0 };
+  // --- MARKETS ---
+  "asia pacific": { center: { lat: 22.0, lon: 120.0 }, spread: { lat: 8, lon: 10 } }, // Taiwan/PH/JP edge
+  "east asia": { center: { lat: 35.0, lon: 103.0 }, spread: { lat: 10, lon: 14 } },
+  "global": { center: { lat: 10.0, lon: 0.0 }, spread: { lat: 18, lon: 28 } },
+};
+
+function regionToLatLon(region: string, seedKey: string): LatLon {
+  const key = region.toLowerCase().trim();
+  const area = REGION_AREAS[key];
+
+  // If we don't recognize the region label, fall back to a small set of sane global centers
+  const fallbackCenters: LatLon[] = [
+    { lat: 31.5, lon: 35.0 },   // Middle East
+    { lat: 49.0, lon: 31.0 },   // Eastern Europe
+    { lat: 22.0, lon: 120.0 },  // APAC
+    { lat: -15.0, lon: -58.0 }, // South America
+    { lat: 9.0, lon: 20.0 },    // Africa
+    { lat: 39.0, lon: -98.0 },  // North America
+  ];
+
+  const base = area?.center ?? fallbackCenters[hashSeed(key) % fallbackCenters.length];
+
+  // During demo mode, keep pins stable so the map reads “accurate”.
+  if (!PIN_JITTER_ENABLED) {
+    return {
+      lat: clamp(base.lat, -80, 80),
+      lon: clamp(base.lon, -179.9, 179.9),
+    };
   }
 
-  if (r.includes('south america') || r.includes('latam') || r.includes('latin america')) {
-    return { lat: -15.0, lon: -60.0 };
-  }
+  const spread = area?.spread ?? { lat: 6, lon: 10 };
 
-  if (r.includes('africa')) return { lat: 6.0, lon: 20.0 };
+  // Stable pseudo-random offset inside the region box (prevents stacks on one centroid)
+  const h = hashSeed(`${seedKey}|${key}`);
+  const r1 = rand01(h + 11);
+  const r2 = rand01(h + 29);
 
-  if (r.includes('asia pacific') || r.includes('apac')) return { lat: 15.0, lon: 125.0 };
-  if (r.includes('southeast asia') || r === 'sea') return { lat: 10.0, lon: 105.0 };
-  if (r.includes('east asia')) return { lat: 35.0, lon: 120.0 };
-  if (r.includes('south asia')) return { lat: 22.0, lon: 80.0 };
-  if (r.includes('asia')) return { lat: 25.0, lon: 100.0 };
+  // Centered [-1..1] then scaled
+  const dLat = (r1 * 2 - 1) * spread.lat;
+  const dLon = (r2 * 2 - 1) * spread.lon;
 
-  if (r === 'em' || r.includes('emerging')) return { lat: 20.0, lon: 95.0 };
-
-  // Global / fallback -> Gulf of Guinea (looks centered and avoids ocean-only vibes)
-  return { lat: 0.0, lon: 10.0 };
+  return {
+    lat: clamp(base.lat + dLat, -80, 80),
+    lon: clamp(base.lon + dLon, -179.9, 179.9),
+  };
 }
 
-function regionToPoint(region: string): MapPoint {
-  return projectLonLatToMap(regionToLatLon(region));
+function regionToPoint(event: EventItem, mapW: number, mapH: number): MapPoint {
+  return projectLonLatToMap(regionToLatLon(event.region, event.id), mapW, mapH);
 }
 
 function sevColor(sev: number) {
@@ -649,21 +794,177 @@ function sevColor(sev: number) {
   return { ring: "rgba(16,185,129,0.9)", fill: "rgba(16,185,129,0.26)" };
 }
 
+function regionCode(region: string) {
+  const r = region.trim().toUpperCase();
+  const map: Record<string, string> = {
+    'MIDDLE EAST': 'MIDEAST',
+    'EASTERN EUROPE': 'E EUR',
+    'SOUTH AMERICA': 'S AM',
+    'ASIA PACIFIC': 'APAC',
+    'NORTH AMERICA': 'N AM',
+    'SOUTH CHINA SEA': 'SCS',
+    'KOREAN PENINSULA': 'KOREA',
+    'LATIN AMERICA': 'LATAM',
+    'AFRICA': 'AFR',
+    'EUROPE': 'EUR',
+    'GLOBAL': 'GLBL',
+    'EAST ASIA': 'E ASIA',
+  };
+  return map[r] ?? (r.length <= 10 ? r : r.slice(0, 10));
+}
+function hashSeed(str: string) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function rand01(seed: number) {
+  // xorshift32
+  let x = seed || 1;
+  x ^= x << 13;
+  x ^= x >>> 17;
+  x ^= x << 5;
+  return ((x >>> 0) % 10000) / 10000;
+}
+
+type MapPulse = { key: string; eventId: string; region: string; severity: number };
+
 // Replace your HeroMap function with this enhanced tactical version
 function HeroMap({
   events,
   worldThreat,
   onSelectEvent,
+  rightOverlay,
+  pulse,
 }: {
   events: EventItem[];
   worldThreat: number;
   onSelectEvent: (event: EventItem) => void;
+  rightOverlay?: ReactNode;
+  pulse?: MapPulse | null;
 }) {
   const [worldSvg, setWorldSvg] = useState<string | null>(null);
+  const [mapSize, setMapSize] = useState<{ w: number; h: number } | null>(null);
   const [hoveredPin, setHoveredPin] = useState<{ id: string; p: MapPoint } | null>(null);
   const [activeCategories, setActiveCategories] = useState<Set<Category>>(
     new Set(['SECURITY', 'STATE', 'MARKETS'])
   );
+  const [legendOpen, setLegendOpen] = useState(false);
+
+  // --- Zoom / Pan (SVG viewBox; stays sharp) ---
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const isPanningRef = useRef(false);
+  const lastPtRef = useRef<{ x: number; y: number } | null>(null);
+
+  const [viewBox, setViewBox] = useState<{ x: number; y: number; w: number; h: number }>({
+    x: 0,
+    y: 0,
+    w: mapSize?.w ?? 1000,
+    h: mapSize?.h ?? 520,
+  });
+
+  // Keep viewBox synced to the loaded SVG dimensions on first load (and if map changes)
+  useEffect(() => {
+    if (!mapSize) return;
+    const raf = window.requestAnimationFrame(() => {
+      setViewBox({ x: 0, y: 0, w: mapSize.w, h: mapSize.h });
+    });
+    return () => window.cancelAnimationFrame(raf);
+  }, [mapSize]);
+
+  const zoomPct = useMemo(() => {
+    if (!mapSize) return 100;
+    return Math.round((mapSize.w / viewBox.w) * 100);
+  }, [mapSize, viewBox.w]);
+
+  const resetView = useCallback(() => {
+    if (!mapSize) return;
+    setViewBox({ x: 0, y: 0, w: mapSize.w, h: mapSize.h });
+  }, [mapSize]);
+
+  // Wheel zoom (non-passive so we can prevent page scroll)
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+
+    const onWheel = (ev: WheelEvent) => {
+      ev.preventDefault();
+      if (!mapSize) return;
+
+      const rect = el.getBoundingClientRect();
+      const px = ev.clientX - rect.left;
+      const py = ev.clientY - rect.top;
+
+      // Convert mouse position to SVG units within current viewBox
+      const mx = viewBox.x + (px / rect.width) * viewBox.w;
+      const my = viewBox.y + (py / rect.height) * viewBox.h;
+
+      const dir = ev.deltaY > 0 ? -1 : 1; // up = zoom in
+      const factor = dir > 0 ? 0.92 : 1.08; // shrink viewBox to zoom in
+
+      const nextW = clamp(viewBox.w * factor, mapSize.w / 4, mapSize.w); // max zoom = 4x
+      const nextH = clamp(viewBox.h * factor, mapSize.h / 4, mapSize.h);
+
+      // Keep mouse point stable by anchoring around (mx,my)
+      const nx = mx - ((mx - viewBox.x) / viewBox.w) * nextW;
+      const ny = my - ((my - viewBox.y) / viewBox.h) * nextH;
+
+      // Clamp to map bounds
+      const clampedX = clamp(nx, 0, mapSize.w - nextW);
+      const clampedY = clamp(ny, 0, mapSize.h - nextH);
+
+      setViewBox({ x: clampedX, y: clampedY, w: nextW, h: nextH });
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, [viewBox.x, viewBox.y, viewBox.w, viewBox.h, mapSize]);
+
+  const onMouseDownViewport = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    isPanningRef.current = true;
+    lastPtRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const onMouseMoveViewport = (e: React.MouseEvent) => {
+    if (!isPanningRef.current || !lastPtRef.current) return;
+    if (!mapSize) return;
+
+    const el = viewportRef.current;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    const dxPx = e.clientX - lastPtRef.current.x;
+    const dyPx = e.clientY - lastPtRef.current.y;
+    lastPtRef.current = { x: e.clientX, y: e.clientY };
+
+    const dx = (dxPx / rect.width) * viewBox.w;
+    const dy = (dyPx / rect.height) * viewBox.h;
+
+    setViewBox((vb) => {
+      const nx = clamp(vb.x - dx, 0, mapSize.w - vb.w);
+      const ny = clamp(vb.y - dy, 0, mapSize.h - vb.h);
+      return { ...vb, x: nx, y: ny };
+    });
+  };
+
+  const endPan = () => {
+    isPanningRef.current = false;
+    lastPtRef.current = null;
+  };
+  // TEMP: turn on to verify map projection alignment (remove once confirmed)
+  const GEO_DEBUG = false;
+  // Scale UI sizes to the SVG coordinate space (original UI tuned for ~1000px wide maps)
+  const uiScale = mapSize ? mapSize.w / 1000 : 1;
+  // Visual noise controls (we'll re-introduce layers intentionally)
+  const SHOW_CONNECTIONS = false;
+  const SHOW_SEISMIC = true;
+  const SHOW_HEAT_ZONES = false;
 
   useEffect(() => {
     let cancelled = false;
@@ -671,27 +972,131 @@ function HeroMap({
       .then((r) => (r.ok ? r.text() : null))
       .then((t) => {
         if (cancelled) return;
-        if (t && t.includes("<svg")) setWorldSvg(t);
+        if (t && t.includes("<svg")) {
+          // Parse viewBox so pins project into the exact same coordinate space
+          const m = t.match(/viewBox=\"0 0 ([\d.]+) ([\d.]+)\"/);
+          if (m) {
+            const w = Number(m[1]);
+            const h = Number(m[2]);
+            if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
+              setMapSize({ w, h });
+            }
+          }
+          // Keep only inner SVG content so we can render it inside our own <svg viewBox=...>
+          const inner = t
+            .replace(/^[\s\S]*?<svg[^>]*>/i, '')
+            .replace(/<\/svg>\s*$/i, '');
+          setWorldSvg(inner);
+        }
       })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
-  // Filter by active categories and show top 12 events
+  // Filter by active categories and show top 12 events, excluding global/worldwide pins
   const pins = useMemo(() => {
+    if (!mapSize) return [];
+
     const filtered = events
-      .filter(e => activeCategories.has(e.category))
+      .filter((e) => activeCategories.has(e.category))
+      // Global / worldwide items should not appear as a single “GLBL” pin.
+      // They’re better represented by the overall threat and the feed.
+      .filter((e) => {
+        const r = e.region.toLowerCase().trim();
+        return r !== 'global' && r !== 'worldwide' && r !== 'world';
+      })
       .slice()
       .sort((a, b) => b.severity - a.severity)
       .slice(0, 12);
 
-    return filtered.map((e, idx) => ({
-      e,
-      p: regionToPoint(e.region),
-      c: sevColor(e.severity),
-      primary: idx === 0,
-    }));
-  }, [events, activeCategories]);
+    return filtered.map((e, idx) => {
+      const base = regionToPoint(e, mapSize.w, mapSize.h);
+      // Offset intentionally disabled while we dial in exact geo positioning.
+      // (We can reintroduce collision-avoidance nudges later, but not category offsets.)
+      const offset = { x: 0, y: 0 };
+
+      return {
+        e,
+        p: { x: base.x + offset.x, y: base.y + offset.y },
+        c: sevColor(e.severity),
+        primary: idx === 0,
+      };
+    });
+  }, [events, activeCategories, mapSize]);
+
+  // Seismic “activity field” (map-native dots around event origin)
+  const seismicDots = useMemo(() => {
+    if (!mapSize) return [];
+
+    const src = events
+      .filter((e) => activeCategories.has(e.category))
+      .filter((e) => {
+        const r = e.region.toLowerCase().trim();
+        return r !== 'global' && r !== 'worldwide' && r !== 'world';
+      })
+      .slice(0, 18); // keep it tasteful
+
+    const dots: Array<{
+      key: string;
+      x: number;
+      y: number;
+      r: number;
+      ring: string;
+      delay: string;
+      dur: string;
+      baseOpacity: number;
+    }> = [];
+
+    for (let i = 0; i < src.length; i++) {
+      const e = src[i];
+      const baseP = regionToPoint(e, mapSize.w, mapSize.h);
+      const c = sevColor(e.severity);
+
+      // Density scales with severity + confidence (verified feels “heavier”)
+      const confBoost = e.confidence === 'HIGH' ? 2 : e.confidence === 'MED' ? 1 : 0;
+      const count = clamp(Math.floor(e.severity / 18) + confBoost, 3, 8);
+
+      // Spread scales slightly with severity so critical looks “louder”
+      const spread = e.severity >= 80 ? 30 : e.severity >= 60 ? 24 : e.severity >= 40 ? 20 : 16;
+
+      const base = hashSeed(e.id + '|' + e.region + '|' + e.category);
+
+      for (let k = 0; k < count; k++) {
+        const s1 = base + (k + 1) * 101;
+        const s2 = base + (k + 1) * 203;
+
+        const ox = (rand01(s1) * 2 - 1) * spread;
+        const oy = (rand01(s2) * 2 - 1) * (spread * 0.78);
+
+        const rr = (1.4 + (k % 3) * 0.7) * uiScale;
+        const delay = ((k * 0.18) + (i % 5) * 0.07).toFixed(2);
+        const dur = (2.2 + (k % 4) * 0.35 + (e.severity >= 80 ? 0.15 : 0)).toFixed(2);
+
+        dots.push({
+          key: `sd-${e.id}-${k}`,
+          x: baseP.x + ox,
+          y: baseP.y + oy,
+          r: rr,
+          ring: c.ring,
+          delay: `${delay}s`,
+          dur: `${dur}s`,
+          baseOpacity: e.severity >= 80 ? 0.62 : e.severity >= 60 ? 0.55 : e.severity >= 40 ? 0.48 : 0.42,
+        });
+      }
+    }
+
+    return dots;
+  }, [events, activeCategories, mapSize, uiScale]);
+
+  const pulseRender = useMemo(() => {
+    if (!pulse) return null;
+
+    const match = pins.find((x) => x.e.id === pulse.eventId);
+    const p = match?.p ?? (mapSize ? projectLonLatToMap(regionToLatLon(pulse.region, pulse.key), mapSize.w, mapSize.h) : { x: 500, y: 260 });
+    const c = sevColor(pulse.severity);
+
+    return { key: pulse.key, p, c };
+  }, [pulse, pins, mapSize]);
 
   // Calculate connection lines between related events
   const connections = useMemo(() => {
@@ -745,12 +1150,12 @@ function HeroMap({
 
   return (
     <section className="relative">
-      <div className="sticky top-0 z-0 h-[72vh] min-h-[560px]">
+      <div className="sticky top-0 z-0 h-[80vh] min-h-[640px]">
         <div className="absolute inset-0 bg-black">
           {/* Keep your existing vignette and grid */}
-          <div className="absolute inset-0 bg-[radial-gradient(1200px_700px_at_50%_10%,rgba(255,255,255,0.08),transparent_60%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(900px_500px_at_60%_40%,rgba(16,185,129,0.07),transparent_60%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(900px_500px_at_35%_55%,rgba(249,115,22,0.06),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(1400px_800px_at_50%_12%,rgba(16,185,129,0.15),transparent_65%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(1000px_600px_at_60%_40%,rgba(16,185,129,0.12),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(900px_500px_at_35%_55%,rgba(249,115,22,0.10),transparent_60%)]" />
 
           <div
             className="absolute inset-0 opacity-[0.06]"
@@ -762,26 +1167,67 @@ function HeroMap({
           />
 
           {/* Map */}
-          <div className="absolute inset-0">
-            {worldSvg ? (
-              <div className="absolute inset-0 opacity-[0.16] pointer-events-none [mask-image:radial-gradient(900px_520px_at_50%_45%,black,transparent_72%)]">
-                <div
-                  className="absolute inset-0 [&_svg]:w-full [&_svg]:h-full [&_svg]:block [&_svg]:opacity-100 [&_svg_path]:fill-[rgba(16,185,129,0.10)] [&_svg_path]:stroke-[rgba(16,185,129,0.18)] [&_svg_path]:stroke-[0.6]"
-                  dangerouslySetInnerHTML={{ __html: worldSvg }}
-                />
-              </div>
-            ) : (
-              <div className="absolute inset-0 text-zinc-600 flex items-center justify-center text-sm">
-                world.svg not loaded
-              </div>
-            )}
-
-            {/* Enhanced tactical SVG overlay */}
-            <svg
-              viewBox="0 0 1000 520"
-              className="absolute inset-0 h-full w-full"
-              preserveAspectRatio="xMidYMid slice"
+          <div className="absolute inset-0 flex items-center justify-center">
+            {/* Zoom/pan viewport */}
+            <div
+              ref={viewportRef}
+              className="relative h-full w-full overflow-hidden pointer-events-auto cursor-grab active:cursor-grabbing"
+              onMouseDown={onMouseDownViewport}
+              onMouseMove={onMouseMoveViewport}
+              onMouseUp={endPan}
+              onMouseLeave={endPan}
+              onDoubleClick={resetView}
+              aria-label="Interactive world map"
             >
+              {/* Transform layer (applies to both the SVG map and the pin overlay) */}
+              <div className="absolute inset-0">
+                {/* Keep SVG coordinate space and on-screen aspect ratio aligned */}
+                <div className="relative h-full w-full">
+                  {/* Enhanced tactical SVG overlay */}
+                  <svg
+                    viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
+                    className="absolute inset-0 h-full w-full"
+                    preserveAspectRatio="xMidYMid meet"
+                  >
+                    {/* World map (rendered inside the same SVG so it zooms/pans with pins) */}
+                    {worldSvg ? (
+                      <g
+                        opacity={0.35}
+                        pointerEvents="none"
+                        style={{ filter: 'drop-shadow(0 0 22px rgba(16,185,129,0.12))' }}
+                      >
+                        <g
+                          style={{
+                            // Keep the prior vignette-like masking feel
+                            maskImage: 'radial-gradient(2200px 1300px at 50% 45%, black 72%, transparent 94%)',
+                            WebkitMaskImage: 'radial-gradient(2200px 1300px at 50% 45%, black 72%, transparent 94%)',
+                          }}
+                        >
+                          <g
+                            // Style all paths uniformly (fast, no per-path edits)
+                            style={{
+                              fill: 'rgba(16,185,129,0.16)',
+                              stroke: 'rgba(16,185,129,0.28)',
+                              strokeWidth: 0.9,
+                            }}
+                            dangerouslySetInnerHTML={{ __html: worldSvg }}
+                          />
+                        </g>
+                      </g>
+                    ) : (
+                      <g pointerEvents="none">
+                        <text
+                          x={(mapSize?.w ?? 1000) / 2}
+                          y={(mapSize?.h ?? 520) / 2}
+                          textAnchor="middle"
+                          fill="rgba(113,113,122,0.8)"
+                          fontSize={14}
+                          fontFamily="monospace"
+                        >
+                          world.svg not loaded
+                        </text>
+                      </g>
+                    )}
               <defs>
                 <filter id="tactical-glow" x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="6" result="blur" />
@@ -796,183 +1242,459 @@ function HeroMap({
                     <feMergeNode in="SourceGraphic" />
                   </feMerge>
                 </filter>
+
+                <filter id="ring-distort" x="-40%" y="-40%" width="180%" height="180%">
+                  <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="2" seed="2" result="noise">
+                    <animate attributeName="baseFrequency" values="0.012;0.02;0.012" dur="0.35s" repeatCount="indefinite" />
+                  </feTurbulence>
+                  <feDisplacementMap in="SourceGraphic" in2="noise" scale="10" xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+
+                {hoveredPin ? (
+                  <mask id="hover-spotlight">
+                    <rect x="0" y="0" width={mapSize?.w ?? 1000} height={mapSize?.h ?? 520} fill="white" />
+                    <circle cx={hoveredPin.p.x} cy={hoveredPin.p.y} r={95} fill="black" />
+                  </mask>
+                ) : null}
               </defs>
 
-              {/* Connection lines */}
-              <g opacity="0.5">
-                {connections.map((conn, idx) => {
-                  const midX = (conn.from.x + conn.to.x) / 2;
-                  const midY = (conn.from.y + conn.to.y) / 2;
-                  const controlY = midY - 30;
-                  
-                  return (
-                    <path
-                      key={idx}
-                      d={`M ${conn.from.x} ${conn.from.y} Q ${midX} ${controlY} ${conn.to.x} ${conn.to.y}`}
-                      stroke={conn.color}
-                      strokeWidth={1}
-                      fill="none"
-                      strokeDasharray="3,3"
-                      opacity={conn.opacity}
-                    >
-                      <animate
-                        attributeName="stroke-dashoffset"
-                        values="0;-6"
-                        dur="1.2s"
-                        repeatCount="indefinite"
-                      />
-                    </path>
-                  );
-                })}
-              </g>
-
-              {/* Threat zones around high-severity events */}
-              {pins.filter(p => p.e.severity >= 70).map(({ e, p, c }) => (
-                <circle
-                  key={`zone-${e.id}`}
-                  cx={p.x}
-                  cy={p.y}
-                  r={e.severity >= 80 ? 38 : 28}
-                  fill={c.fill}
-                  opacity={0.10}
+              {/* Subtle background dim on hover (spotlight around hovered pin) */}
+              {hoveredPin ? (
+                <rect
+                  x="0"
+                  y="0"
+                  width={mapSize?.w ?? 1000}
+                  height={mapSize?.h ?? 520}
+                  fill="rgba(0,0,0,0.42)"
+                  mask="url(#hover-spotlight)"
+                  pointerEvents="none"
                 />
-              ))}
+              ) : null}
 
-              {/* Enhanced pins with tactical labels */}
-              <g filter="url(#tactical-glow)">
-                {pins.map(({ e, p, c, primary }) => {
-                  const isHovered = hoveredPin?.id === e.id;
-                  const showLabel = primary || isHovered;
-                  // 1) Reduce pin sizing
-                  const pinSize = primary ? 12 : isHovered ? 10 : 8;
-                  return (
-                    <g
-                      key={e.id}
-                      onMouseEnter={() => setHoveredPin({ id: e.id, p })}
-                      onMouseLeave={() => setHoveredPin(null)}
-                      onClick={() => onSelectEvent(e)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      {/* Outer glow field */}
-                      <circle
-                        cx={p.x}
-                        cy={p.y}
-                        r={primary ? 22 : 14}
-                        fill={c.fill}
-                        opacity={primary ? 0.16 : 0.10}
-                      />
+              {/* Geo debug markers (toggle with GEO_DEBUG) */}
+              {GEO_DEBUG && mapSize ? (
+                <g pointerEvents="none" opacity="0.85">
+                  {(
+                    [
+                      { label: '0,0', lon: 0, lat: 0 },
+                      { label: '0,30N', lon: 0, lat: 30 },
+                      { label: '0,30S', lon: 0, lat: -30 },
+                      { label: '90E,0', lon: 90, lat: 0 },
+                      { label: '90W,0', lon: -90, lat: 0 },
+                      { label: '180,0', lon: 180, lat: 0 },
+                    ] as const
+                  ).map((pt) => {
+                    const p = projectLonLatToMap({ lon: pt.lon, lat: pt.lat }, mapSize.w, mapSize.h);
+                    return (
+                      <g key={pt.label}>
+                        <line x1={p.x - 10} y1={p.y} x2={p.x + 10} y2={p.y} stroke="rgba(16,185,129,0.9)" strokeWidth={1} />
+                        <line x1={p.x} y1={p.y - 10} x2={p.x} y2={p.y + 10} stroke="rgba(16,185,129,0.9)" strokeWidth={1} />
+                        <circle cx={p.x} cy={p.y} r={3} fill="rgba(0,0,0,0.85)" stroke="rgba(16,185,129,0.9)" strokeWidth={1} />
+                        <text x={p.x + 12} y={p.y - 8} fill="rgba(161,161,170,0.95)" fontSize="10" fontFamily="monospace">
+                          {pt.label}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </g>
+              ) : null}
+              {/* Feed-triggered pulse (single, tasteful) */}
+              {pulseRender ? (
+                <g key={pulseRender.key} pointerEvents="none">
+                  <circle
+                    cx={pulseRender.p.x}
+                    cy={pulseRender.p.y}
+                    r={10 * uiScale}
+                    fill="none"
+                    stroke={pulseRender.c.ring}
+                    strokeWidth={2}
+                    opacity={0.9}
+                  >
+                    <animate attributeName="r" values={`${10 * uiScale};${70 * uiScale}`} dur="1.4s" repeatCount="1" />
+                    <animate attributeName="opacity" values="0.95;0" dur="1.4s" repeatCount="1" />
+                  </circle>
+                  <circle
+                    cx={pulseRender.p.x}
+                    cy={pulseRender.p.y}
+                    r={4 * uiScale}
+                    fill={pulseRender.c.ring}
+                    opacity={0.9}
+                  >
+                    <animate attributeName="opacity" values="0.9;0.2;0.9" dur="0.6s" repeatCount="2" />
+                  </circle>
+                </g>
+              ) : null}
+              {/* Connection lines */}
+              {SHOW_CONNECTIONS ? (
+                <g opacity="0.5">
+                  {connections.map((conn, idx) => {
+                    const midX = (conn.from.x + conn.to.x) / 2;
+                    const midY = (conn.from.y + conn.to.y) / 2;
+                    const controlY = midY - 30;
 
-                      {/* Animated breathing ring */}
-                      <circle
-                        cx={p.x}
-                        cy={p.y}
-                        r={pinSize + 2}
+                    return (
+                      <path
+                        key={idx}
+                        d={`M ${conn.from.x} ${conn.from.y} Q ${midX} ${controlY} ${conn.to.x} ${conn.to.y}`}
+                        stroke={conn.color}
+                        strokeWidth={1}
                         fill="none"
-                        stroke={c.ring}
-                        strokeWidth={primary ? 2 : 1.25}
-                        opacity={primary ? 0.85 : 0.50}
+                        strokeDasharray="3,3"
+                        opacity={conn.opacity}
                       >
                         <animate
-                          attributeName="r"
-                          values={`${pinSize + 1};${pinSize + 4};${pinSize + 1}`}
-                          dur={primary ? "2.4s" : "3.8s"}
+                          attributeName="stroke-dashoffset"
+                          values="0;-6"
+                          dur="1.2s"
+                          repeatCount="indefinite"
+                        />
+                      </path>
+                    );
+                  })}
+                </g>
+              ) : null}
+              {SHOW_SEISMIC ? (
+                <>
+                  {/* Seismic activity dots (severity-coded, map-native) */}
+                  <g opacity="0.95" pointerEvents="none">
+                    {seismicDots.map((d) => (
+                      <circle
+                        key={d.key}
+                        cx={d.x}
+                        cy={d.y}
+                        r={d.r}
+                        fill={d.ring}
+                        opacity={d.baseOpacity}
+                      >
+                        <animate
+                          attributeName="opacity"
+                          values={`${Math.max(0.12, d.baseOpacity - 0.25)};${d.baseOpacity};${Math.max(0.12, d.baseOpacity - 0.25)}`}
+                          dur={d.dur}
+                          begin={d.delay}
                           repeatCount="indefinite"
                         />
                         <animate
-                          attributeName="opacity"
-                          values={primary ? "0.65;1;0.65" : "0.35;0.6;0.35"}
-                          dur={primary ? "2.4s" : "3.8s"}
+                          attributeName="r"
+                          values={`${d.r};${d.r + 1.8 * uiScale};${d.r}`}
+                          dur={d.dur}
+                          begin={d.delay}
                           repeatCount="indefinite"
                         />
                       </circle>
+                    ))}
+                  </g>
 
-                      {/* Core pin */}
-                      <circle
-                        cx={p.x}
-                        cy={p.y}
-                        r={pinSize}
-                        fill="rgba(0,0,0,0.85)"
-                        stroke={c.ring}
-                        strokeWidth={1.6}
-                      />
+                  {/* Seismic label (small, tactical) */}
+                  <g>
+                    <rect x="22" y={(mapSize?.h ?? 520) - 30} width="210" height="22" rx="6" fill="rgba(0,0,0,0.55)" stroke="rgba(63,63,70,0.55)" strokeWidth="1" />
+                    <text x="34" y={(mapSize?.h ?? 520) - 15} fill="rgba(161,161,170,0.9)" fontSize="9" fontFamily="monospace" letterSpacing="3">SEISMIC ACTIVITY</text>
+                    <text x="188" y={(mapSize?.h ?? 520) - 15} fill="rgba(82,82,91,0.9)" fontSize="9" fontFamily="monospace">DOTS</text>
+                  </g>
+                </>
+              ) : null}
 
-                      {/* Inner indicator */}
-                      <circle
-                        cx={p.x}
-                        cy={p.y}
-                        r={pinSize * 0.40}
-                        fill={c.ring}
-                        opacity={0.9}
-                      />
+              {SHOW_HEAT_ZONES ? (
+                <>
+                  {/* Threat zones around high-severity events */}
+                  {pins.filter(p => p.e.severity >= 70).map(({ e, p, c }) => (
+                    <circle
+                      key={`zone-${e.id}`}
+                      cx={p.x}
+                      cy={p.y}
+                      r={e.severity >= 80 ? 38 : 28}
+                      fill={c.fill}
+                      opacity={0.10}
+                    />
+                  ))}
+                  {/* NEW: Regional heat zones - clusters of nearby threats */}
+                  {(() => {
+                    const clusters: Array<{ center: MapPoint; severity: number; count: number }> = [];
+                    const CLUSTER_RADIUS = 120;
 
-                      {/* Tactical label (severity + region) */}
-                      {showLabel && (
-                        <>
-                          {/* Tooltip container */}
-                          <rect
-                            x={p.x + pinSize + 6}
-                            y={p.y - (isHovered ? 22 : 9)}
-                            width={isHovered ? 170 : 78}
-                            height={isHovered ? 34 : 18}
-                            fill="rgba(0,0,0,0.92)"
-                            stroke={c.ring}
-                            strokeWidth={0.6}
-                            rx={3}
-                          />
+                    pins.forEach((pin) => {
+                      let found = false;
+                      clusters.forEach((cluster) => {
+                        const dist = Math.sqrt(
+                          Math.pow(cluster.center.x - pin.p.x, 2) +
+                          Math.pow(cluster.center.y - pin.p.y, 2)
+                        );
+                        if (dist < CLUSTER_RADIUS) {
+                          cluster.severity = Math.max(cluster.severity, pin.e.severity);
+                          cluster.count++;
+                          found = true;
+                        }
+                      });
 
-                          {/* Connector */}
-                          <line
-                            x1={p.x + pinSize}
-                            y1={p.y}
-                            x2={p.x + pinSize + 6}
-                            y2={p.y}
-                            stroke={c.ring}
-                            strokeWidth={0.6}
-                            opacity={0.65}
-                          />
+                      if (!found && pin.e.severity >= 60) {
+                        clusters.push({
+                          center: pin.p,
+                          severity: pin.e.severity,
+                          count: 1,
+                        });
+                      }
+                    });
 
-                          {/* Row 1: severity + region */}
-                          <text
-                            x={p.x + pinSize + 12}
-                            y={p.y - (isHovered ? 8 : -0)}
-                            fill={c.ring}
-                            fontSize="10"
-                            fontFamily="monospace"
-                            fontWeight="bold"
-                          >
-                            {e.severity}
-                          </text>
-                          <text
-                            x={p.x + pinSize + 34}
-                            y={p.y - (isHovered ? 8 : -0)}
-                            fill="rgba(255,255,255,0.62)"
-                            fontSize="9"
-                            fontFamily="monospace"
-                          >
-                            {e.region.toUpperCase()}
-                          </text>
+                    return clusters
+                      .filter((c) => c.count >= 2 || c.severity >= 75)
+                      .map((cluster, idx) => {
+                        const c = sevColor(cluster.severity);
+                        const radius = 65 + cluster.count * 12;
 
-                          {/* Row 2: title snippet (hover only) */}
-                          {isHovered && (
-                            <text
-                              x={p.x + pinSize + 12}
-                              y={p.y + 10}
-                              fill="rgba(255,255,255,0.72)"
-                              fontSize="9"
-                              fontFamily="monospace"
+                        return (
+                          <g key={`cluster-${idx}`}>
+                            <circle
+                              cx={cluster.center.x}
+                              cy={cluster.center.y}
+                              r={radius}
+                              fill={c.fill}
+                              opacity={0.08}
                             >
-                              {displayTitleFor(e).slice(0, 28).toUpperCase()}{displayTitleFor(e).length > 28 ? '…' : ''}
-                            </text>
-                          )}
-                        </>
-                      )}
+                              <animate
+                                attributeName="r"
+                                values={`${radius};${radius + 15};${radius}`}
+                                dur="5s"
+                                repeatCount="indefinite"
+                              />
+                            </circle>
 
-                      <title>{`${displayTitleFor(e)} • ${e.region} • sev ${e.severity}`}</title>
-                    </g>
-                  );
-                })}
+                            <circle
+                              cx={cluster.center.x}
+                              cy={cluster.center.y}
+                              r={radius * 0.6}
+                              fill={c.fill}
+                              opacity={0.15}
+                            >
+                              <animate
+                                attributeName="opacity"
+                                values="0.10;0.20;0.10"
+                                dur="4s"
+                                repeatCount="indefinite"
+                              />
+                            </circle>
+                          </g>
+                        );
+                      });
+                  })()}
+                </>
+              ) : null}
+
+              {/* Enhanced pins with tactical labels */}
+<g filter="url(#tactical-glow)">
+  {pins.map(({ e, p, c, primary }, idx) => {
+    const isHovered = hoveredPin?.id === e.id;
+    // Show label only for top threat or when hovered
+    const showLabel = idx === 0 || isHovered;
+    const pinSize = (idx === 0 ? 10 : idx === 1 ? 8 : idx === 2 ? 7 : 5) * uiScale;
+    const baseLabelW = 110 * uiScale;
+    const baseLabelH = 22 * uiScale;
+    const hoverLabelW = 190 * uiScale;
+    const hoverLabelH = 34 * uiScale;
+    const labelW = isHovered ? hoverLabelW : baseLabelW;
+    const labelH = isHovered ? hoverLabelH : baseLabelH;
+    const code = regionCode(e.region);
+
+    return (
+      <g
+        key={e.id}
+        onMouseEnter={() => setHoveredPin({ id: e.id, p })}
+        onMouseLeave={() => setHoveredPin(null)}
+        onClick={() => onSelectEvent(e)}
+        style={{ cursor: 'pointer' }}
+      >
+        {/* Outer glow field - larger for top threats */}
+        <circle
+          cx={p.x}
+          cy={p.y}
+          r={(idx === 0 ? 24 : idx === 1 ? 18 : idx === 2 ? 14 : 12) * uiScale}
+          fill={c.fill}
+          opacity={idx === 0 ? 0.20 : idx === 1 ? 0.14 : 0.10}
+        />
+
+        {/* Core pin - larger for top 3 */}
+        <circle
+          cx={p.x}
+          cy={p.y}
+          r={pinSize}
+          fill="rgba(0,0,0,0.92)"
+          stroke={c.ring}
+          strokeWidth={2}
+        >
+          {isHovered ? (
+            <>
+              <animate attributeName="r" values={`${pinSize};${pinSize + 2};${pinSize}`} dur="0.18s" repeatCount="1" />
+              <animate attributeName="stroke-width" values="2;3;2" dur="0.18s" repeatCount="1" />
+            </>
+          ) : null}
+        </circle>
+
+        {/* Inner indicator */}
+        <circle
+          cx={p.x}
+          cy={p.y}
+          r={pinSize * 0.45}
+          fill={c.ring}
+          opacity={0.95}
+        />
+
+        {/* ALWAYS-ON tactical label for top 3 */}
+        {showLabel && (
+          <>
+            {/* Label background */}
+            <rect
+              x={p.x + pinSize + 8 * uiScale}
+              y={p.y - 11 * uiScale}
+              width={labelW}
+              height={labelH}
+              fill="rgba(0,0,0,0.94)"
+              stroke={c.ring}
+              strokeWidth={0.8}
+              rx={3}
+            >
+              {isHovered ? (
+                <>
+                  {/* deploy with slight latency */}
+                  <animate attributeName="x" values={`${p.x + pinSize + 2};${p.x + pinSize + 8}`} dur="160ms" begin="0.05s" fill="freeze" />
+                  <animate attributeName="width" values={`${baseLabelW};${hoverLabelW}`} dur="160ms" begin="0.05s" fill="freeze" />
+                  <animate attributeName="height" values={`${baseLabelH};${hoverLabelH}`} dur="160ms" begin="0.05s" fill="freeze" />
+                </>
+              ) : null}
+            </rect>
+
+            {/* Connector line */}
+            <line
+              x1={p.x + pinSize}
+              y1={p.y}
+              x2={p.x + pinSize + 8 * uiScale}
+              y2={p.y}
+              stroke={c.ring}
+              strokeWidth={0.8}
+              opacity={0.75}
+            />
+
+            {/* ClipPath for label text */}
+            <defs>
+              <clipPath id={`label-clip-${idx}`}> 
+                <rect
+                  x={p.x + pinSize + 12 * uiScale}
+                  y={p.y - 10 * uiScale}
+                  width={hoverLabelW - 16 * uiScale}
+                  height={hoverLabelH - 4 * uiScale}
+                  rx={2 * uiScale}
+                />
+              </clipPath>
+            </defs>
+
+            <g
+              style={{
+                transform: `translateX(${isHovered ? 14 : 0}px)`,
+                transformOrigin: 'left center',
+                transition: 'transform 160ms ease, opacity 160ms ease',
+                opacity: isHovered ? 1 : 0.88,
+              }}
+            >
+              <g
+                clipPath={`url(#label-clip-${idx})`}
+                className={isHovered ? 'animate-[labelPop_160ms_ease-out,glitchNudge_260ms_steps(2,end)]' : ''}
+              >
+              {/* Severity */}
+              <text
+                x={p.x + pinSize + 14 * uiScale}
+                y={p.y + 1 * uiScale}
+                dominantBaseline="middle"
+                fill={c.ring}
+                fontSize={isHovered ? 11 * uiScale : 12 * uiScale}
+                fontFamily="monospace"
+                fontWeight="bold"
+                style={
+                  isHovered
+                    ? { opacity: 0, animation: 'labelLineIn 140ms ease-out forwards', animationDelay: '80ms' }
+                    : undefined
+                }
+              >
+                {e.severity}
+              </text>
+
+              {/* Region */}
+              <text
+                x={p.x + pinSize + 38 * uiScale}
+                y={p.y + 1 * uiScale}
+                dominantBaseline="middle"
+                fill="rgba(255,255,255,0.68)"
+                fontSize={9 * uiScale}
+                fontFamily="monospace"
+                style={
+                  isHovered
+                    ? { opacity: 0, animation: 'labelLineIn 140ms ease-out forwards', animationDelay: '110ms' }
+                    : undefined
+                }
+              >
+                {code}
+              </text>
+
+              {/* Title snippet (hover only) */}
+              {isHovered && (
+                <text
+                  x={p.x + pinSize + 14 * uiScale}
+                  y={p.y + 13 * uiScale}
+                  dominantBaseline="middle"
+                  fill="rgba(255,255,255,0.78)"
+                  fontSize={9 * uiScale}
+                  fontFamily="monospace"
+                  style={{ opacity: 0, animation: 'labelLineIn 150ms ease-out forwards', animationDelay: '140ms' }}
+                >
+                  {displayTitleFor(e).slice(0, 22).toUpperCase()}
+                </text>
+              )}
               </g>
-            </svg>
+            </g>
+          </>
+        )}
+
+        {/* DEVELOPING badge for events <5min old */}
+        {e.updatedMinutesAgo < 5 && idx < 3 && (
+          <g>
+            <rect
+              x={p.x - 26}
+              y={p.y - pinSize - 16}
+              width={52}
+              height={12}
+              fill="rgba(239,68,68,0.15)"
+              stroke="rgba(239,68,68,0.8)"
+              strokeWidth={0.6}
+              rx={2}
+            />
+            <text
+              x={p.x}
+              y={p.y - pinSize - 8}
+              fill="rgba(239,68,68,1)"
+              fontSize="7"
+              fontFamily="monospace"
+              fontWeight="bold"
+              textAnchor="middle"
+            >
+              DEVELOPING
+            </text>
+          </g>
+        )}
+
+      </g>
+    );
+  })}
+</g>
+                  </svg>
+                </div>
+              </div>
+
+              {/* Zoom hint + reset */}
+              <div className="pointer-events-none absolute bottom-4 left-4 rounded-lg border border-zinc-800/60 bg-black/40 px-3 py-2 backdrop-blur-md">
+                <div className="text-[10px] font-mono text-zinc-500">Scroll: zoom · Drag: pan · Double-click: reset</div>
+              </div>
+
+              <div className="pointer-events-none absolute bottom-4 right-4 rounded-lg border border-zinc-800/60 bg-black/40 px-3 py-2 backdrop-blur-md">
+                <div className="text-[10px] font-mono text-zinc-500">ZOOM</div>
+                <div className="mt-1 text-xs font-mono text-zinc-300">{zoomPct}%</div>
+              </div>
+            </div>
           </div>
 
           {/* Keep your existing center threat module - UNCHANGED */}
@@ -993,69 +1715,101 @@ function HeroMap({
             </div>
           </div>
 
-          {/* Enhanced tactical legend with category filters */}
-          <div className="absolute right-6 top-6 pointer-events-auto">
-            <div className="rounded-lg border border-zinc-800/60 bg-black/50 backdrop-blur-md px-3 py-2.5 space-y-3">
-              {/* Severity legend */}
-              <div>
-                <div className="text-[9px] tracking-[0.26em] text-zinc-500 mb-2">THREAT LEVELS</div>
-                <div className="space-y-1.5 text-xs text-zinc-400">
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-red-500" />
-                    <span className="text-[10px]">CRITICAL</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-orange-500" />
-                    <span className="text-[10px]">ELEVATED</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-yellow-500" />
-                    <span className="text-[10px]">WATCH</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-[10px]">MONITOR</span>
+          {/* Tactical legend (collapsible to avoid map + feed clutter) */}
+          <div className="absolute right-6 top-6 z-50 pointer-events-auto">
+            {/* Compact toggle (always visible) */}
+            <button
+              type="button"
+              onClick={() => setLegendOpen((v) => !v)}
+              className={
+                "flex items-center gap-3 rounded-lg border border-zinc-800/60 bg-black/55 backdrop-blur-md px-3 py-2 transition-all hover:border-zinc-700 " +
+                (legendOpen ? "shadow-[0_0_0_1px_rgba(255,255,255,0.05)]" : "")
+              }
+              aria-label={legendOpen ? 'Hide legend' : 'Show legend'}
+            >
+              <span className="text-[9px] tracking-[0.26em] text-zinc-500">LEGEND</span>
+              <span className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                <span className="h-2 w-2 rounded-full bg-orange-500" />
+                <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span className="text-[10px] font-mono text-zinc-500">{legendOpen ? '−' : '+'}</span>
+            </button>
+
+            {/* Full panel (only when open) */}
+            {legendOpen ? (
+              <div className="mt-2 w-[200px] rounded-lg border border-zinc-800/60 bg-black/50 backdrop-blur-md px-3 py-2.5 space-y-3">
+                {/* Severity legend */}
+                <div>
+                  <div className="text-[9px] tracking-[0.26em] text-zinc-500 mb-2">THREAT LEVELS</div>
+                  <div className="space-y-1.5 text-xs text-zinc-400">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-red-500" />
+                      <span className="text-[10px]">CRITICAL</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-orange-500" />
+                      <span className="text-[10px]">ELEVATED</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-yellow-500" />
+                      <span className="text-[10px]">WATCH</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                      <span className="text-[10px]">MONITOR</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Category filters */}
-              <div className="pt-3 border-t border-zinc-800/60">
-                <div className="text-[9px] tracking-[0.26em] text-zinc-500 mb-2">CATEGORIES</div>
-                <div className="space-y-1.5">
-                  {(['SECURITY', 'STATE', 'MARKETS'] as Category[]).map(cat => {
-                    const Icon = cat === 'SECURITY' ? Shield : cat === 'STATE' ? Globe : DollarSign;
-                    const isActive = activeCategories.has(cat);
-                    const color = cat === 'SECURITY' ? 'text-red-400' : cat === 'STATE' ? 'text-purple-400' : 'text-blue-400';
-                    const bgColor = cat === 'SECURITY' ? 'bg-red-500/10' : cat === 'STATE' ? 'bg-purple-500/10' : 'bg-blue-500/10';
-                    
-                    return (
-                      <button
-                        key={cat}
-                        onClick={() => toggleCategory(cat)}
-                        className={`flex items-center gap-2 w-full rounded px-2 py-1 text-[10px] transition-all ${
-                          isActive
-                            ? `${bgColor} ${color} border border-zinc-700`
-                            : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
-                        }`}
-                      >
-                        <Icon className="w-3 h-3" />
-                        <span className="font-mono">{cat.slice(0, 3)}</span>
-                      </button>
-                    );
-                  })}
+                {/* Category filters */}
+                <div className="pt-3 border-t border-zinc-800/60">
+                  <div className="text-[9px] tracking-[0.26em] text-zinc-500 mb-2">CATEGORIES</div>
+                  <div className="space-y-1.5">
+                    {(['SECURITY', 'STATE', 'MARKETS'] as Category[]).map(cat => {
+                      const Icon = cat === 'SECURITY' ? Shield : cat === 'STATE' ? Globe : DollarSign;
+                      const isActive = activeCategories.has(cat);
+                      const color = cat === 'SECURITY' ? 'text-red-400' : cat === 'STATE' ? 'text-purple-400' : 'text-blue-400';
+                      const bgColor = cat === 'SECURITY' ? 'bg-red-500/10' : cat === 'STATE' ? 'bg-purple-500/10' : 'bg-blue-500/10';
+
+                      return (
+                        <button
+                          key={cat}
+                          onClick={() => toggleCategory(cat)}
+                          className={`flex items-center gap-2 w-full rounded px-2 py-1 text-[10px] transition-all ${
+                            isActive
+                              ? `${bgColor} ${color} border border-zinc-700`
+                              : 'text-zinc-600 hover:text-zinc-400 border border-transparent'
+                          }`}
+                        >
+                          <Icon className="w-3 h-3" />
+                          <span className="font-mono">{cat.slice(0, 3)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Pin count */}
+                <div className="pt-2 border-t border-zinc-800/60 text-[9px] text-zinc-600 font-mono">
+                  {pins.length} ACTIVE
                 </div>
               </div>
-
-              {/* Pin count */}
-              <div className="pt-2 border-t border-zinc-800/60 text-[9px] text-zinc-600 font-mono">
-                {pins.length} ACTIVE
-              </div>
-            </div>
+            ) : null}
           </div>
 
-          {/* Keep your existing bottom fade */}
-          <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-b from-transparent to-black" />
+          {/* Right-side overlay (Live Signal Feed) */}
+          {rightOverlay ? (
+            <div className="absolute right-6 top-[168px] z-40 w-[380px] max-w-[92vw] pointer-events-auto">
+              {rightOverlay}
+            </div>
+          ) : null}
+
+
+
+{/* Keep your existing bottom fade */}
+<div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-b from-transparent to-black" />
         </div>
       </div>
 
@@ -1066,6 +1820,15 @@ function HeroMap({
 }
 
 export default function SituationMonitor() {
+  const [mapPulse, setMapPulse] = useState<MapPulse | null>(null);
+  const onFeedSignal = useCallback((s: LiveSignal) => {
+    setMapPulse({
+      key: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      eventId: s.event.id,
+      region: s.event.region,
+      severity: s.event.severity,
+    });
+  }, []);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<Category | 'ALL'>('ALL');
   const [severityThreshold, setSeverityThreshold] = useState(0);
@@ -1090,6 +1853,7 @@ export default function SituationMonitor() {
   const [threatAnim, setThreatAnim] = useState<'idle' | 'swap'>('idle');
   const prevTopThreatIdRef = useRef<string | null>(null);
 
+
   useEffect(() => {
     const t = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(t);
@@ -1111,7 +1875,7 @@ export default function SituationMonitor() {
       if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const target = e.target as HTMLElement | null;
         const tag = target?.tagName?.toLowerCase();
-        const isTyping = tag === 'input' || tag === 'textarea' || (target as any)?.isContentEditable;
+        const isTyping = tag === 'input' || tag === 'textarea' || !!target?.isContentEditable;
         if (!isTyping) {
           e.preventDefault();
           searchInputRef.current?.focus();
@@ -1194,7 +1958,7 @@ export default function SituationMonitor() {
   }, [eventsData]);
 
   const filteredEvents = useMemo(() => {
-    let filtered = eventsData.filter(e => {
+    const filtered = eventsData.filter(e => {
       if (categoryFilter !== 'ALL' && e.category !== categoryFilter) return false;
       if (e.severity < severityThreshold) return false;
       if (confidenceFilter !== 'ALL' && e.confidence !== confidenceFilter) return false;
@@ -1237,41 +2001,113 @@ export default function SituationMonitor() {
       return;
     }
     if (prevTopThreatIdRef.current !== id) {
-      setThreatAnim('swap');
+      window.setTimeout(() => setThreatAnim('swap'), 0);
       window.setTimeout(() => setThreatAnim('idle'), 220);
       prevTopThreatIdRef.current = id;
     }
   }, [topThreat?.id]);
 
   return (
-    <div className="min-h-screen bg-black text-zinc-100">
+    <div className="min-h-screen text-zinc-100 relative overflow-hidden bg-black">
+      {/* Background depth layers */}
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(1200px_700px_at_50%_-10%,rgba(16,185,129,0.10),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_600px_at_80%_30%,rgba(59,130,246,0.06),transparent_65%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_500px_at_20%_60%,rgba(249,115,22,0.05),transparent_65%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black" />
+
       {/* Grid background */}
-      <div 
+      <div
         className="fixed inset-0 opacity-[0.03]"
         style={{
-          backgroundImage: 'linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px)',
-          backgroundSize: '50px 50px'
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px)',
+          backgroundSize: '50px 50px',
         }}
       />
+
+      {/* Global style for keyframes */}
       <style jsx global>{`
-        @keyframes radar {
-          0% { transform: translate(-50%, -50%) scale(0.92); opacity: 0.10; }
-          40% { opacity: 0.22; }
-          100% { transform: translate(-50%, -50%) scale(1.18); opacity: 0; }
+        @keyframes tickerIn {
+          0% {
+            opacity: 0;
+            transform: translate(-30px, -50%) scale(0.98);
+          }
+          100% {
+            opacity: 1;
+            transform: translate(var(--ticker-x, 0), -50%) scale(1);
+          }
         }
         @keyframes slideIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
+          0% {
+            opacity: 0;
+            transform: translateY(12px) scale(0.98);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes labelPop {
+          0% {
+            opacity: 0;
+            transform: translateY(2px) scale(0.98);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes labelLineIn {
+          0% {
+            opacity: 0;
+          }
+          100% {
+            opacity: 1;
+          }
+        }
+        @keyframes glitchNudge {
+          0% {
+            transform: translateX(0px);
+          }
+          25% {
+            transform: translateX(-1.5px);
+          }
+          50% {
+            transform: translateX(2px);
+          }
+          75% {
+            transform: translateX(-1px);
+          }
+          100% {
+            transform: translateX(0px);
+          }
+        }
+        @keyframes pinPulse {
+          0% {
+            transform: translate(-50%, -50%) scale(0.92);
+            opacity: 0.1;
+          }
+          40% {
+            opacity: 0.22;
+          }
+          50% {
+            transform: translate(-50%, -50%) scale(1.23);
+            opacity: 0.32;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(0.92);
+            opacity: 0.1;
+          }
         }
       `}</style>
-      
+
       {/* Header */}
       <header className="border-b border-zinc-900 bg-zinc-950/50 backdrop-blur sticky top-0 z-40">
         <div className="max-w-[1600px] mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">
-                <Activity className="w-6 h-6 text-emerald-400" />
+                <Globe className="w-6 h-6 text-emerald-400" />
                 <div>
                   <h1 className="text-xl font-bold tracking-tight">SITUATION MONITOR</h1>
                   <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
@@ -1283,9 +2119,8 @@ export default function SituationMonitor() {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3">
-              {/* Command search (compact, always available) */}
               <div className="relative hidden md:block">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
                 <input
@@ -1296,17 +2131,18 @@ export default function SituationMonitor() {
                   placeholder="Query live intel…"
                   className="w-[320px] bg-zinc-950/70 border border-zinc-800 rounded-lg pl-10 pr-10 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-700"
                 />
-                <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-zinc-800 bg-zinc-950/60 px-1.5 py-0.5 text-[10px] font-mono text-zinc-500">/</div>
+                <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-zinc-800 bg-zinc-950/60 px-1.5 py-0.5 text-[10px] font-mono text-zinc-500">
+                  /
+                </div>
               </div>
-              {/* Removed RiskGauge from header right */}
             </div>
           </div>
-          
+
           <div className="grid grid-cols-4 gap-3">
             <StatCard
               label="Total Signals"
               value={eventsData.length.toString()}
-              icon={Activity}
+              icon={Globe}
               onClick={() => {
                 setActivePreset(null);
                 setCategoryFilter('ALL');
@@ -1320,7 +2156,7 @@ export default function SituationMonitor() {
               label="Critical"
               value={stats.criticalCount.toString()}
               trend={{ value: '+2', up: true }}
-              icon={AlertTriangle}
+              icon={TrendingUp}
               onClick={() => {
                 setActivePreset('Critical');
                 setCategoryFilter('ALL');
@@ -1347,7 +2183,7 @@ export default function SituationMonitor() {
               label="High Confidence"
               value={stats.highConfidence.toString()}
               trend={{ value: '+1', up: true }}
-              icon={Zap}
+              icon={BadgeCheck}
               onClick={() => {
                 setActivePreset('High Confidence');
                 setCategoryFilter('ALL');
@@ -1358,6 +2194,7 @@ export default function SituationMonitor() {
               }}
             />
           </div>
+
           {topThreat && (
             <button
               type="button"
@@ -1375,7 +2212,7 @@ export default function SituationMonitor() {
               </div>
               <div
                 className={
-                  "mt-1 flex items-center justify-between gap-4 transition-all duration-200 " +
+                  'mt-1 flex items-center justify-between gap-4 transition-all duration-200 ' +
                   (threatAnim === 'swap' ? 'opacity-0 -translate-y-1' : 'opacity-100 translate-y-0')
                 }
               >
@@ -1385,7 +2222,9 @@ export default function SituationMonitor() {
                   <span className="text-zinc-400">{topThreat.summary}</span>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded border border-zinc-800 bg-black/40 px-2 py-1 text-xs font-mono text-zinc-300">sev {topThreat.severity}</span>
+                  <span className="rounded border border-zinc-800 bg-black/40 px-2 py-1 text-xs font-mono text-zinc-300">
+                    sev {topThreat.severity}
+                  </span>
                   <ChevronRight className="h-4 w-4 text-zinc-500" />
                 </div>
               </div>
@@ -1393,136 +2232,136 @@ export default function SituationMonitor() {
           )}
         </div>
       </header>
-      
-      {/* Hero map intro */}
+
+      {/* Hero map */}
       <HeroMap
         events={filteredEvents}
         worldThreat={stats.maxSeverity}
         onSelectEvent={(e) => setSelectedEvent(e)}
+        pulse={mapPulse}
+        rightOverlay={
+          <LiveSignalFeed events={eventsData} mode="ticker" maxCards={4} onSignal={onFeedSignal} />
+        }
       />
 
-      {/* Console (glides over map) */}
+      {/* Console */}
       <div ref={consoleRef} className="relative z-10 -mt-[34vh]">
         <div className="h-10 w-full bg-gradient-to-b from-transparent to-black" />
         <div className="max-w-[1600px] mx-auto px-6 pb-6">
-          <div className={
-            "rounded-2xl border bg-black/70 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.04)] " +
-            (stats.maxSeverity >= 80
-              ? "border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.10)]"
-              : "border-zinc-900/80")
-          }>
+          <div
+            className={
+              'rounded-2xl border bg-black/70 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.04)] ' +
+              (stats.maxSeverity >= 80
+                ? 'border-red-500/20 shadow-[0_0_30px_rgba(239,68,68,0.10)]'
+                : 'border-zinc-900/80')
+            }
+          >
             <div className="p-6">
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-lg p-4 mb-6">
-          <div className="grid grid-cols-9 gap-4">
-            <div className="col-span-3">
-              <label className="text-xs text-zinc-500 uppercase tracking-wider mb-2 block">Category</label>
-              <select 
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value as Category | 'ALL')}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700"
-              >
-                <option value="ALL">All Categories</option>
-                <option value="SECURITY">Security</option>
-                <option value="STATE">State</option>
-                <option value="MARKETS">Markets</option>
-              </select>
-            </div>
-            
-            <div className="col-span-3">
-              <label className="text-xs text-zinc-500 uppercase tracking-wider mb-2 block">Min Severity</label>
-              <select 
-                value={severityThreshold}
-                onChange={(e) => setSeverityThreshold(Number(e.target.value))}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700"
-              >
-                <option value="0">All (0+)</option>
-                <option value="40">Watch (40+)</option>
-                <option value="60">Elevated (60+)</option>
-                <option value="80">Critical (80+)</option>
-              </select>
-            </div>
-            
-            <div className="col-span-3">
-              <label className="text-xs text-zinc-500 uppercase tracking-wider mb-2 block">Sort By</label>
-              <select 
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'severity' | 'recent')}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700"
-              >
-                <option value="severity">Severity (High to Low)</option>
-                <option value="recent">Most Recent</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
-            <span>
-              Showing {filteredEvents.length} of {eventsData.length} events
-              {confidenceFilter !== 'ALL' ? ` · Confidence: ${confidenceFilter}` : ''}
-            </span>
-            <div className="flex items-center gap-2">
-              {activePreset && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActivePreset(null);
-                    setCategoryFilter('ALL');
-                    setSeverityThreshold(0);
-                    setConfidenceFilter('ALL');
-                    setSortBy('severity');
-                  }}
-                  className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/60 px-3 py-1 text-[11px] font-mono text-zinc-300 hover:border-zinc-700"
-                  title="Clear preset"
-                >
-                  <span className="text-zinc-500">PRESET</span>
-                  <span className="text-zinc-200">{activePreset}</span>
-                  <span className="text-zinc-600">×</span>
-                </button>
-              )}
-              <span className="text-zinc-600">Tip: press <span className="font-mono text-zinc-400">/</span> to search</span>
-            </div>
-          </div>
-        </div>
-        
-        <LiveSignalFeed events={eventsData} />
-        {/* Event Grid */}
-        <div className="grid grid-cols-3 gap-6">
-          {(['SECURITY', 'STATE', 'MARKETS'] as Category[]).map(cat => {
-            const config = categoryConfig[cat];
-            const events = categorizedEvents[cat];
-            
-            return (
-              <div key={cat}>
-                <div className="flex items-center gap-2 mb-4">
-                  <config.icon className={`w-5 h-5 ${config.color}`} />
-                  <h2 className="text-lg font-semibold">{config.label}</h2>
-                  <span className="ml-auto text-sm text-zinc-500">{events.length}</span>
+              <div className="bg-zinc-900/40 border border-zinc-800 rounded-lg p-4 mb-6">
+                <div className="grid grid-cols-9 gap-4">
+                  <div className="col-span-3">
+                    <label className="text-xs text-zinc-500 uppercase tracking-wider mb-2 block">Category</label>
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value as Category | 'ALL')}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700"
+                    >
+                      <option value="ALL">All Categories</option>
+                      <option value="SECURITY">Security</option>
+                      <option value="STATE">State</option>
+                      <option value="MARKETS">Markets</option>
+                    </select>
+                  </div>
+
+                  <div className="col-span-3">
+                    <label className="text-xs text-zinc-500 uppercase tracking-wider mb-2 block">Min Severity</label>
+                    <select
+                      value={severityThreshold}
+                      onChange={(e) => setSeverityThreshold(Number(e.target.value))}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700"
+                    >
+                      <option value="0">All (0+)</option>
+                      <option value="40">Watch (40+)</option>
+                      <option value="60">Elevated (60+)</option>
+                      <option value="80">Critical (80+)</option>
+                    </select>
+                  </div>
+
+                  <div className="col-span-3">
+                    <label className="text-xs text-zinc-500 uppercase tracking-wider mb-2 block">Sort By</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as 'severity' | 'recent')}
+                      className="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-zinc-700"
+                    >
+                      <option value="severity">Severity (High to Low)</option>
+                      <option value="recent">Most Recent</option>
+                    </select>
+                  </div>
                 </div>
-                
-                <div className="space-y-3">
-                  {events.length === 0 ? (
-                    <div className="bg-zinc-900/20 border border-dashed border-zinc-800 rounded-lg p-6 text-center text-zinc-600 text-sm">
-                      No events match current filters
-                    </div>
-                  ) : (
-                    events.map(event => (
-                      <EventCard 
-                        key={event.id}
-                        event={event}
-                        onClick={() => setSelectedEvent(event)}
-                      />
-                    ))
-                  )}
+
+                <div className="mt-3 flex items-center justify-between text-xs text-zinc-500">
+                  <span>
+                    Showing {filteredEvents.length} of {eventsData.length} events
+                    {confidenceFilter !== 'ALL' ? ` · Confidence: ${confidenceFilter}` : ''}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {activePreset && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActivePreset(null);
+                          setCategoryFilter('ALL');
+                          setSeverityThreshold(0);
+                          setConfidenceFilter('ALL');
+                          setSortBy('severity');
+                        }}
+                        className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/60 px-3 py-1 text-[11px] font-mono text-zinc-300 hover:border-zinc-700"
+                      >
+                        <span className="text-zinc-500">PRESET</span>
+                        <span className="text-zinc-200">{activePreset}</span>
+                        <span className="text-zinc-600">×</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            );
-          })}
-        </div>
+
+              <LiveSignalFeed events={eventsData} onSignal={onFeedSignal} />
+
+              <div className="grid grid-cols-3 gap-6">
+                {(['SECURITY', 'STATE', 'MARKETS'] as Category[]).map((cat) => {
+                  const config = categoryConfig[cat];
+                  const events = categorizedEvents[cat];
+
+                  return (
+                    <div key={cat}>
+                      <div className="flex items-center gap-2 mb-4">
+                        <config.icon className={`w-5 h-5 ${config.color}`} />
+                        <h2 className="text-lg font-semibold">{config.label}</h2>
+                        <span className="ml-auto text-sm text-zinc-500">{events.length}</span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {events.length === 0 ? (
+                          <div className="bg-zinc-900/20 border border-dashed border-zinc-800 rounded-lg p-6 text-center text-zinc-600 text-sm">
+                            No events match current filters
+                          </div>
+                        ) : (
+                          events.map((event) => (
+                            <EventCard key={event.id} event={event} onClick={() => setSelectedEvent(event)} />
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       {/* Event Detail Modal */}
       {selectedEvent && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-6">
@@ -1539,9 +2378,7 @@ export default function SituationMonitor() {
                   );
                 })()}
                 <div>
-                  <h2 className="text-2xl font-bold text-zinc-100 mb-2">
-                    {displayTitleFor(selectedEvent)}
-                  </h2>
+                  <h2 className="text-2xl font-bold text-zinc-100 mb-2">{displayTitleFor(selectedEvent)}</h2>
                   <div className="flex items-center gap-3 text-sm">
                     <span className="text-zinc-400">{selectedEvent.region}</span>
                     <span className="text-zinc-700">•</span>
@@ -1549,27 +2386,27 @@ export default function SituationMonitor() {
                   </div>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedEvent(null)}
                 className="text-zinc-500 hover:text-zinc-300 text-3xl leading-none"
               >
                 ×
               </button>
             </div>
-            
+
             <div className="p-6 space-y-6">
               <div>
                 <h3 className="text-sm font-mono text-zinc-500 uppercase tracking-wider mb-3">Assessment</h3>
                 <p className="text-zinc-200 leading-relaxed">{selectedEvent.summary}</p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
                   <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Severity</div>
                   <div className="text-3xl font-bold text-zinc-100 mb-2">{selectedEvent.severity}</div>
                   <SeverityBar severity={selectedEvent.severity} />
                 </div>
-                
+
                 <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
                   <div className="text-xs text-zinc-500 uppercase tracking-wider mb-2">Confidence</div>
                   {(() => {
@@ -1584,13 +2421,17 @@ export default function SituationMonitor() {
                   })()}
                 </div>
               </div>
-              
+
               <div className="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
                 <div className="text-xs text-zinc-500 uppercase tracking-wider mb-3">Momentum</div>
                 <div className="flex items-center gap-3">
                   <MomentumIndicator momentum={selectedEvent.momentum} />
                   <span className="text-zinc-300">
-                    {selectedEvent.momentum === 'UP' ? 'Intensifying' : selectedEvent.momentum === 'DOWN' ? 'Easing' : 'Sustained'}
+                    {selectedEvent.momentum === 'UP'
+                      ? 'Intensifying'
+                      : selectedEvent.momentum === 'DOWN'
+                        ? 'Easing'
+                        : 'Sustained'}
                   </span>
                 </div>
               </div>
@@ -1598,10 +2439,8 @@ export default function SituationMonitor() {
           </div>
         </div>
       )}
-      <Toasts
-        items={toasts}
-        onDismiss={(id) => setToasts((cur) => cur.filter((t) => t.id !== id))}
-      />
+
+      <Toasts items={toasts} onDismiss={(id) => setToasts((cur) => cur.filter((t) => t.id !== id))} />
     </div>
   );
 }
