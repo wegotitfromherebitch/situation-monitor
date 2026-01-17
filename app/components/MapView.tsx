@@ -100,6 +100,9 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
     return (
         <div className={`relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 group ${className || 'w-full h-full'}`}>
 
+            {/* CSS Grid Overlay - Performance friendly "Intel" look */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none z-0" />
+
             {/* Top Right Controls */}
             <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
                 <button onClick={handleZoomIn} className="p-2 bg-zinc-900/80 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors">
@@ -131,11 +134,39 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
                     maxZoom={5}
                     minZoom={0.7}
                     onMove={(evt: any) => {
-                        if (evt.zoom) setZoom(evt.zoom);
-                        if (evt.coordinates) setCenter(evt.coordinates);
+                        setZoom(evt.zoom);
+                        setCenter(evt.coordinates);
                     }}
                 >
-                    <WorldMap />
+                    {/* Geographies only - removed heavy Graticule/Sphere */}
+                    <Geographies geography={geoUrl}>
+                        {({ geographies }) =>
+                            geographies.map((geo) => (
+                                <Geography
+                                    key={geo.rsmKey}
+                                    geography={geo}
+                                    style={{
+                                        default: {
+                                            fill: "#18181b", // Dark Zinc
+                                            stroke: "#3f3f46", // Slight contrast border
+                                            strokeWidth: 0.5,
+                                            outline: "none",
+                                        },
+                                        hover: {
+                                            fill: "#27272a",
+                                            stroke: "#52525b",
+                                            strokeWidth: 0.7,
+                                            outline: "none",
+                                        },
+                                        pressed: {
+                                            fill: "#27272a",
+                                            outline: "none",
+                                        },
+                                    }}
+                                />
+                            ))
+                        }
+                    </Geographies>
 
                     {/* Seismic Layer (Subtle Rings) */}
                     {quakes.map((quake) => {
