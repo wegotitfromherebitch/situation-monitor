@@ -1,4 +1,4 @@
-export type Category = "SECURITY" | "STATE" | "MARKETS";
+export type Category = "SECURITY" | "STATE" | "MARKETS" | "CYBER" | "CLIMATE";
 
 export type EventItem = {
   id: string;
@@ -7,6 +7,7 @@ export type EventItem = {
   titleOverride?: string;
   momentum?: "UP" | "FLAT" | "DOWN";
   region: string;
+  coordinates: [number, number]; // [lat, lng]
   summary: string;
   severity: number; // 0–100
   confidence: "LOW" | "MED" | "HIGH";
@@ -58,7 +59,8 @@ export const EVENTS: EventItem[] = [
     category: "SECURITY",
     baseTitle: "Naval signaling",
     momentum: "UP",
-    region: "Middle East",
+    region: "Red Sea",
+    coordinates: [15.5, 41.5],
     summary:
       "Signal volume rising across multiple monitoring channels. Escalation risk increasing; attribution and intent remain uncertain.",
     severity: 82,
@@ -70,7 +72,8 @@ export const EVENTS: EventItem[] = [
     category: "STATE",
     baseTitle: "Leadership contest",
     momentum: "UP",
-    region: "South America",
+    region: "Brasilia",
+    coordinates: [-15.8, -47.9],
     summary:
       "External messaging amplifying internal instability. Sustained escalation pressure likely if current trends persist.",
     severity: 67,
@@ -82,7 +85,8 @@ export const EVENTS: EventItem[] = [
     category: "MARKETS",
     baseTitle: "Energy volatility",
     momentum: "FLAT",
-    region: "Global",
+    region: "Rotterdam Hub",
+    coordinates: [51.9, 4.4],
     summary:
       "Price ranges widening amid headline-driven repricing. No clear directional consensus established.",
     severity: 58,
@@ -94,7 +98,8 @@ export const EVENTS: EventItem[] = [
     category: "SECURITY",
     baseTitle: "Cross-border kinetic chatter",
     momentum: "UP",
-    region: "Eastern Europe",
+    region: "Donbas",
+    coordinates: [48.0, 38.0],
     summary:
       "Fragmented claims circulating within regional feeds. Verification incomplete, but signal density continues to build.",
     severity: 73,
@@ -106,11 +111,77 @@ export const EVENTS: EventItem[] = [
     category: "MARKETS",
     baseTitle: "EM FX stress",
     momentum: "UP",
-    region: "EM",
+    region: "Istanbul",
+    coordinates: [41.0, 29.0],
     summary:
       "Currency weakness accelerating alongside volatility signals. Broader macro contagion risk under active assessment.",
     severity: 61,
     confidence: "MED",
     updatedMinutesAgo: 31,
+  },
+  {
+    id: "evt-006",
+    category: "CYBER",
+    baseTitle: "Infrastructure probe",
+    momentum: "UP",
+    region: "Taiwan Strait",
+    coordinates: [24.0, 119.5],
+    summary:
+      "Anomalous packet volume detected against critical grid endpoints. Signature matches APT-29 profile.",
+    severity: 88,
+    confidence: "HIGH",
+    updatedMinutesAgo: 2,
+  },
+  {
+    id: "evt-007",
+    category: "CLIMATE",
+    baseTitle: "Extreme thermal anomaly",
+    momentum: "UP",
+    region: "New Delhi",
+    coordinates: [28.6, 77.2],
+    summary:
+      "Wet bulb temperature exceeding safe thresholds. Grid strain expected within 4 hours.",
+    severity: 45,
+    confidence: "HIGH",
+    updatedMinutesAgo: 45,
+  },
+  {
+    id: "evt-008",
+    category: "SECURITY",
+    baseTitle: "Troop displacement",
+    momentum: "FLAT",
+    region: "Sahel Border",
+    coordinates: [14.0, 2.0],
+    summary:
+      "Satellite reconnaissance confirms new encampments. Logistic supply lines appearing active.",
+    severity: 55,
+    confidence: "MED",
+    updatedMinutesAgo: 120,
+  },
+  {
+    id: "evt-009",
+    category: "MARKETS",
+    baseTitle: "Tech sector flash crash",
+    momentum: "DOWN",
+    region: "New York",
+    coordinates: [40.7, -74.0],
+    summary:
+      "Algorithmic trading triggering circuit breakers. Human traders awaiting clarity.",
+    severity: 78,
+    confidence: "HIGH",
+    updatedMinutesAgo: 5,
+  },
+  {
+    id: "evt-010",
+    category: "CYBER",
+    baseTitle: "Ransomware wave",
+    momentum: "UP",
+    region: "London",
+    coordinates: [51.5, -0.1],
+    summary:
+      "Healthcare sector reporting widespread lockout. Decryption keys demanded in privacy coins.",
+    severity: 92,
+    confidence: "HIGH",
+    updatedMinutesAgo: 1,
   },
 ];

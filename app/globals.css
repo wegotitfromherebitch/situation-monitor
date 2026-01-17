@@ -1,26 +1,75 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Apple-inspired dark mode base */
+  --background: #000000;
+  --foreground: #f5f5f7;
+  
+  /* Semantic Colors - Sophisticated Palette */
+  --color-critical: #ff453a;   /* Apple Red */
+  --color-warning: #ff9f0a;    /* Apple Orange */
+  --color-caution: #ffd60a;    /* Apple Yellow */
+  --color-success: #32d74b;    /* Apple Green */
+  --color-info: #0a84ff;       /* Apple Blue */
+  --color-system: #64d2ff;     /* Apple Cyan */
+  
+  /* Surface Layers */
+  --surface-base: rgba(28, 28, 30, 0.6);
+  --surface-elevated: rgba(44, 44, 46, 0.75);
+  --glass-border: rgba(255, 255, 255, 0.1);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+  
+  --color-critical: var(--color-critical);
+  --color-warning: var(--color-warning);
+  --color-caution: var(--color-caution);
+  --color-success: var(--color-success);
+  --color-info: var(--color-info);
+  
+  --animate-ticker-in: tickerIn 300ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  --animate-slide-up: slideUp 400ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 
 body {
-  background: var(--background);
+  background: black;
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: var(--surface-base);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+}
+
+.glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.glass-panel-hover:hover {
+  background: var(--surface-elevated);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+/* Animations */
+@keyframes tickerIn {
+  from { opacity: 0; transform: translate(var(--ticker-x), 20px); }
+  to { opacity: 1; transform: translate(var(--ticker-x), -50%); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
