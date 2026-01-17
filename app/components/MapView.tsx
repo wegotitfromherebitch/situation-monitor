@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from 'react';
-import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
+import { useMemo, useState, useEffect } from 'react';
+import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup, Graticule, Sphere } from "react-simple-maps";
 import { scaleLinear } from "d3-scale";
+import { Plus, Minus, RefreshCw } from 'lucide-react';
 import { EventItem } from '../lib/events';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
@@ -10,16 +11,36 @@ const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 interface MapViewProps {
     events: EventItem[];
     onEventClick?: (event: EventItem) => void;
+    className?: string; // Allow className prop for sizing
 }
 
-export function MapView({ events, onEventClick }: MapViewProps) {
+export function MapView({ events, onEventClick, className }: MapViewProps) {
     const [zoom, setZoom] = useState(1);
+    const [center, setCenter] = useState<[number, number]>([0, 20]);
+    const [quakes, setQuakes] = useState<any[]>([]);
 
-    // Color scale relative to severity - memoized to prevent recreation
+    useEffect(() => {
+        // Fetch real seismic data (4.5+ magnitude, last 24h)
+        const fetchQuakes = () => {
+            fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson')
+                .then(res => res.json())
+                .then(data => {
+                    setQuakes(data.features.slice(0, 20));
+                })
+                .catch(err => console.error("Seismic uplink failed", err));
+        }
+
+        fetchQuakes();
+        // Poll every minute
+        const interval = setInterval(fetchQuakes, 60000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Color scale for events
     const colorScale = useMemo(() =>
         scaleLinear<string>()
             .domain([0, 50, 100])
-            .range(["#10b981", "#f59e0b", "#ef4444"]),
+            .range(["#4ade80", "#fbbf24", "#ef4444"]), // Bright Green, Amber, Red
         []);
 
     const markers = useMemo(() => {
@@ -29,26 +50,54 @@ export function MapView({ events, onEventClick }: MapViewProps) {
         }));
     }, [events, colorScale]);
 
-    return (
-        <div className="w-full h-full bg-zinc-950 relative overflow-hidden rounded-xl border border-zinc-900 group">
+    const handleZoomIn = () => setZoom(z => Math.min(z * 1.5, 5));
+    const handleZoomOut = () => setZoom(z => Math.max(z / 1.5, 0.7));
+    const handleReset = () => { setZoom(1); setCenter([0, 20]); };
 
-            {/* Grid Overlay */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none z-0" />
+    return (
+        <div className={`relative overflow-hidden rounded-xl border border-zinc-800 bg-[#020617] group ${className || 'w-full h-full'}`}>
+
+            {/* Top Right Controls */}
+            <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
+                <button onClick={handleZoomIn} className="p-2 bg-zinc-900/80 border border-zinc-700 text-cyan-400 hover:bg-zinc-800 rounded hover:text-cyan-300 transition-colors">
+                    <Plus className="w-4 h-4" />
+                </button>
+                <button onClick={handleZoomOut} className="p-2 bg-zinc-900/80 border border-zinc-700 text-cyan-400 hover:bg-zinc-800 rounded hover:text-cyan-300 transition-colors">
+                    <Minus className="w-4 h-4" />
+                </button>
+                <button onClick={handleReset} className="p-2 bg-zinc-900/80 border border-zinc-700 text-emerald-500 hover:bg-zinc-800 rounded hover:text-emerald-400 transition-colors">
+                    <RefreshCw className="w-4 h-4" />
+                </button>
+            </div>
+
+            {/* Bottom Right Data Timestamp */}
+            <div className="absolute bottom-4 right-4 z-20 font-mono text-[10px] text-zinc-500 bg-black/50 px-2 py-1 rounded border border-zinc-800/50">
+                LIVE ORBITAL DATA • {new Date().toISOString().split('T')[0]}
+            </div>
 
             <ComposableMap
                 projection="geoMercator"
                 projectionConfig={{
-                    scale: 120, // slightly larger
+                    scale: 120,
                 }}
                 className="w-full h-full"
             >
                 <ZoomableGroup
-                    center={[0, 20]}
-                    zoom={1}
-                    maxZoom={4}
+                    center={center}
+                    zoom={zoom}
+                    maxZoom={5}
                     minZoom={0.7}
-                    onMove={({ zoom }) => setZoom(zoom)}
+                    onMove={({ zoom, coordinates }) => {
+                        setZoom(zoom);
+                        setCenter(coordinates as [number, number]);
+                    }}
                 >
+                    {/* Globe Background/Ocean */}
+                    <Sphere stroke="none" strokeWidth={0} fill="#0f172a" id="ocean" />
+
+                    {/* Grid Lines */}
+                    <Graticule stroke="#1e293b" strokeWidth={0.5} />
+
                     <Geographies geography={geoUrl}>
                         {({ geographies }) =>
                             geographies.map((geo) => (
@@ -57,19 +106,19 @@ export function MapView({ events, onEventClick }: MapViewProps) {
                                     geography={geo}
                                     style={{
                                         default: {
-                                            fill: "#18181b", // zinc-900
-                                            stroke: "#27272a", // zinc-800
-                                            strokeWidth: 0.5,
+                                            fill: "#1e293b", // Slate-800
+                                            stroke: "#334155", // Slate-700 Borders
+                                            strokeWidth: 0.75,
                                             outline: "none",
                                         },
                                         hover: {
-                                            fill: "#27272a",
-                                            stroke: "#3f3f46",
-                                            strokeWidth: 0.7,
+                                            fill: "#334155",
+                                            stroke: "#38bdf8", // Sky-400 Hover Border
+                                            strokeWidth: 1,
                                             outline: "none",
                                         },
                                         pressed: {
-                                            fill: "#27272a",
+                                            fill: "#0f172a",
                                             outline: "none",
                                         },
                                     }}
@@ -78,52 +127,87 @@ export function MapView({ events, onEventClick }: MapViewProps) {
                         }
                     </Geographies>
 
+                    {/* Seismic Layer (Yellow Squares) */}
+                    {quakes.map((quake) => {
+                        const scaleFactor = 1 / zoom;
+                        const mag = quake.properties.mag;
+
+                        return (
+                            <Marker
+                                key={quake.id}
+                                coordinates={quake.geometry.coordinates}
+                            >
+                                <g transform={`scale(${scaleFactor})`}>
+                                    <rect
+                                        x={-3} y={-3}
+                                        width={6} height={6}
+                                        fill="#facc15" // Yellow-400
+                                        stroke="#a16207" // Yellow-700
+                                        strokeWidth={1}
+                                        fillOpacity={0.8}
+                                    />
+                                    <text
+                                        y={14}
+                                        textAnchor="middle"
+                                        className="text-[8px] fill-yellow-500 font-mono font-bold tracking-tight"
+                                        style={{ fontSize: 8 }}
+                                    >
+                                        {mag.toFixed(1)}
+                                    </text>
+                                </g>
+                            </Marker>
+                        )
+                    })}
+
+                    {/* Main Events (Target Reticles) */}
                     {markers.map((marker) => {
                         if (!marker.coordinates) return null;
-
-                        // Counter-scale factor to keep pins constant size visually
                         const scaleFactor = 1 / zoom;
 
                         return (
                             <Marker
                                 key={marker.id}
-                                coordinates={[marker.coordinates[1], marker.coordinates[0]]} // lon, lat
+                                coordinates={[marker.coordinates[1], marker.coordinates[0]]}
                                 onClick={() => onEventClick?.(marker)}
                                 className="cursor-pointer group/marker"
                             >
                                 <g transform={`scale(${scaleFactor})`}>
-                                    {/* Pulsing effect - fixed size */}
+                                    {/* Outer Target Ring (Spinning slowly) */}
                                     <circle
-                                        r={8}
-                                        fill={marker.color}
-                                        opacity={0.3}
-                                        className="animate-ping"
+                                        r={12}
+                                        fill="transparent"
+                                        stroke={marker.color}
+                                        strokeWidth={1}
+                                        strokeDasharray="4 2"
+                                        opacity={0.6}
+                                        className="animate-[spin_10s_linear_infinite]"
                                     />
+
+                                    {/* Inner Core */}
                                     <circle
                                         r={4}
                                         fill={marker.color}
-                                        stroke="#18181b"
-                                        strokeWidth={1}
-                                        className="transition-all duration-300 group-hover/marker:scale-150"
+                                        stroke="#fff"
+                                        strokeWidth={1.5}
+                                        className="group-hover/marker:scale-125 transition-transform"
                                     />
 
-                                    {/* Floating Label */}
+                                    {/* Label Box */}
                                     <g className="opacity-0 group-hover/marker:opacity-100 transition-opacity duration-200">
                                         <rect
-                                            x={12}
-                                            y={-14}
-                                            width={marker.baseTitle.length * 7 + 20}
+                                            x={16} y={-12}
+                                            width={marker.baseTitle.length * 6 + 16}
                                             height={24}
-                                            rx={4}
-                                            fill="#09090b"
+                                            fill="#020617"
                                             stroke={marker.color}
                                             strokeWidth={1}
+                                            rx={2}
                                         />
                                         <text
                                             textAnchor="start"
-                                            x={20}
-                                            y={2}
-                                            style={{ fontFamily: 'system-ui', fontSize: 10, fill: '#e4e4e7', fontWeight: 'bold' }}
+                                            x={24} y={4}
+                                            className="text-[10px] fill-zinc-100 font-mono uppercase tracking-wide"
+                                            style={{ fontSize: 10 }}
                                         >
                                             {marker.baseTitle}
                                         </text>
@@ -134,25 +218,6 @@ export function MapView({ events, onEventClick }: MapViewProps) {
                     })}
                 </ZoomableGroup>
             </ComposableMap>
-
-            {/* Scanning Line Overlay - Command Center Aesthetic */}
-            <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-                <div
-                    className="w-full h-[2px] bg-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.5)] absolute"
-                    style={{
-                        animation: 'scan 8s linear infinite'
-                    }}
-                />
-            </div>
-
-            <style>{`
-                @keyframes scan {
-                    0% { top: -10%; opacity: 0; }
-                    10% { opacity: 1; }
-                    90% { opacity: 1; }
-                    100% { top: 110%; opacity: 0; }
-                }
-            `}</style>
         </div>
     );
 }
