@@ -212,6 +212,21 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
                                             {actionState?.action === 'uplink' && actionState.status === 'done' ? 'Synced' : 'SECURE_CHANNEL'}
                                         </div>
                                     </button>
+
+                                    {event.url && (
+                                        <button
+                                            onClick={() => window.open(event.url, '_blank')}
+                                            className="w-full text-left px-4 py-3 bg-zinc-900/40 hover:bg-zinc-900 border border-white/5 hover:border-zinc-700 transition-all rounded-none flex items-center justify-between group active:scale-[0.98] hud-card"
+                                        >
+                                            <span className="flex items-center gap-3">
+                                                <Globe className="w-4 h-4 text-cyan-500 group-hover:text-cyan-400 transition-colors" />
+                                                <span className="text-sm text-zinc-200 font-mono">ACCESS_SOURCE_FEED</span>
+                                            </span>
+                                            <div className="px-2 py-0.5 bg-cyan-500/10 text-[10px] font-bold text-cyan-500 group-hover:bg-cyan-500/20 transition-colors uppercase font-mono">
+                                                EXTERNAL_LINK
+                                            </div>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 

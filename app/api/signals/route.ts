@@ -45,9 +45,9 @@ export async function GET() {
     try {
         // Query GDELT for recent high-impact events
         const queries = [
-            'conflict',
-            'economy',
-            'crisis'
+            'conflict sourcelang:eng',
+            'economy sourcelang:eng',
+            'crisis sourcelang:eng'
         ];
 
         const allEvents: Array<{
@@ -63,6 +63,7 @@ export async function GET() {
             lng: number;
             momentum: 'UP' | 'DOWN' | 'FLAT';
             source: string;
+            url?: string;
         }> = [];
 
         for (const query of queries) {
@@ -117,7 +118,8 @@ export async function GET() {
                             lat: 0, // Would need geocoding
                             lng: 0,
                             momentum: tone < -20 ? 'UP' : tone > 10 ? 'DOWN' : 'FLAT',
-                            source: new URL(article.url || 'https://gdeltproject.org').hostname
+                            source: new URL(article.url || 'https://gdeltproject.org').hostname,
+                            url: article.url
                         });
                     }
                 }

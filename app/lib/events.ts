@@ -12,6 +12,8 @@ export type EventItem = {
   severity: number; // 0–100
   confidence: "LOW" | "MED" | "HIGH";
   updatedMinutesAgo: number;
+  url?: string;
+  source?: string;
 };
 
 export type TitleState = "EMERGING" | "INTENSIFYING" | "SUSTAINED" | "EASING" | "DORMANT";
