@@ -86,10 +86,23 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
             {/* CSS Grid Overlay */}
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none z-0" />
 
-            {/* Radar Scan Effect */}
-            <div className="absolute inset-0 z-0 pointer-events-none bg-[conic-gradient(from_0deg_at_50%_50%,transparent_0deg,transparent_60deg,rgba(16,185,129,0.1)_360deg)] animate-[spin_4s_linear_infinite] opacity-20" />
+            {/* Top Right Controls */}
+            <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
+                <button onClick={handleZoomIn} className="p-2 bg-zinc-900/80 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors">
+                    <Plus className="w-4 h-4" />
+                </button>
+                <button onClick={handleZoomOut} className="p-2 bg-zinc-900/80 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors">
+                    <Minus className="w-4 h-4" />
+                </button>
+                <button onClick={handleReset} className="p-2 bg-zinc-900/80 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors">
+                    <RefreshCw className="w-4 h-4" />
+                </button>
+            </div>
 
-            {/* ... (keep controls and timestamp) ... */}
+            {/* Bottom Right Data Timestamp */}
+            <div className="absolute bottom-4 right-4 z-20 font-mono text-[10px] text-zinc-600 bg-zinc-950/80 px-2 py-1 rounded border border-zinc-900">
+                LIVE DATA • {new Date().toISOString().split('T')[0]}
+            </div>
 
             <ComposableMap
                 projection="geoMercator"
