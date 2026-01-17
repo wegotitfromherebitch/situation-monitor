@@ -1,33 +1,31 @@
 @import "tailwindcss";
 
 :root {
-  /* Apple-inspired dark mode base */
-  --background: #000000;
-  --foreground: #f5f5f7;
+  /* Intel/Tactical Base */
+  --background: #050505;
+  --foreground: #e4e4e7;
   
-  /* Semantic Colors - Sophisticated Palette */
-  --color-critical: #ff453a;   /* Apple Red */
-  --color-warning: #ff9f0a;    /* Apple Orange */
-  --color-caution: #ffd60a;    /* Apple Yellow */
-  --color-success: #32d74b;    /* Apple Green */
-  --color-info: #0a84ff;       /* Apple Blue */
-  --color-system: #64d2ff;     /* Apple Cyan */
+  /* Semantic Colors - Tactical Palette */
+  --color-critical: #ef4444;   /* Alert Red */
+  --color-warning: #f59e0b;    /* Caution Amber */
+  --color-success: #10b981;    /* Safe Green */
+  --color-info:    #3b82f6;    /* Data Blue */
+  --color-system:  #06b6d4;    /* System Cyan */
   
-  /* Surface Layers */
-  --surface-base: rgba(28, 28, 30, 0.6);
-  --surface-elevated: rgba(44, 44, 46, 0.75);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  /* Surface Layers - Flat & Technical */
+  --surface-base: #09090b;
+  --surface-elevated: #18181b;
+  --glass-border: #27272a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: "SF Mono", "Menlo", "Monaco", "Courier New", monospace;
+  --font-sans: "IBM Plex Mono", "JetBrains Mono", "Menlo", "Consolas", monospace; /* Tech feel */
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", "Menlo", "Consolas", monospace;
   
   --color-critical: var(--color-critical);
   --color-warning: var(--color-warning);
-  --color-caution: var(--color-caution);
   --color-success: var(--color-success);
   --color-info: var(--color-info);
   
@@ -36,31 +34,48 @@
 }
 
 body {
-  background: black;
+  background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans);
+  font-family: var(--font-mono); /* Force mono for the intel look */
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  background-image: 
+    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+    linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 2px, 3px 100%;
 }
 
-/* Glassmorphism Utilities */
+/* Technical Panels (HUD style) */
 .glass-panel {
   background: var(--surface-base);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+  box-shadow: none;
+  border-radius: 2px; /* Sharp corners */
 }
 
 .glass-panel-hover {
-  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: all 0.2s ease-out;
 }
 
 .glass-panel-hover:hover {
   background: var(--surface-elevated);
-  border-color: rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  border-color: var(--color-info);
+  transform: none; /* No floating */
+}
+
+/* Custom Scrollbar for Terminal Feel */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #000; 
+}
+::-webkit-scrollbar-thumb {
+    background: #333; 
+    border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555; 
 }
 
 /* Animations */
