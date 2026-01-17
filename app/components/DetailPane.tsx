@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EventItem, displayTitleFor } from '../lib/events';
 import { X, Activity, Globe, Shield, Zap, TrendingUp, TrendingDown, Minus } from 'lucide-react';
@@ -24,10 +25,12 @@ const generateHistory = (severity: number) => {
 };
 
 export function DetailPane({ event, onClose }: DetailPaneProps) {
-    if (!event) return null;
+    // Memoize history data based on event id and severity
+    const historyData = useMemo(() =>
+        event ? generateHistory(event.severity) : [],
+        [event?.id, event?.severity]);
 
-    const historyData = generateHistory(event.severity);
-    const title = displayTitleFor(event);
+    const title = event ? displayTitleFor(event) : '';
 
     return (
         <AnimatePresence>
@@ -44,9 +47,9 @@ export function DetailPane({ event, onClose }: DetailPaneProps) {
                         <div>
                             <div className="flex items-center gap-2 mb-2">
                                 <span className={`px-1.5 py-0.5 text-[10px] font-mono rounded border ${event.category === 'SECURITY' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                                        event.category === 'CYBER' ? 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20' :
-                                            event.category === 'MARKETS' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                                'bg-zinc-500/10 text-zinc-500 border-zinc-500/20'
+                                    event.category === 'CYBER' ? 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20' :
+                                        event.category === 'MARKETS' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                            'bg-zinc-500/10 text-zinc-500 border-zinc-500/20'
                                     }`}>
                                     {event.category}
                                 </span>
@@ -79,8 +82,8 @@ export function DetailPane({ event, onClose }: DetailPaneProps) {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className={`text-xl font-bold ${event.momentum === 'UP' ? 'text-red-500' :
-                                            event.momentum === 'DOWN' ? 'text-emerald-500' :
-                                                'text-zinc-400'
+                                        event.momentum === 'DOWN' ? 'text-emerald-500' :
+                                            'text-zinc-400'
                                         }`}>
                                         {event.momentum}
                                     </div>

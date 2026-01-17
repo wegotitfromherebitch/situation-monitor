@@ -1,7 +1,5 @@
-import { Shield, Globe, DollarSign, BadgeCheck, CircleDashed, Clock, ChevronRight, Cpu, CloudRain, AlertTriangle } from 'lucide-react';
+import { Shield, Globe, DollarSign, Cpu, CloudRain } from 'lucide-react';
 import { type EventItem, displayTitleFor } from '../lib/events';
-import { SeverityBar } from './SeverityBar';
-import { MomentumIndicator } from './MomentumIndicator';
 
 const categoryConfig = {
     SECURITY: { icon: Shield, label: "SEC", color: "text-red-500", border: "border-red-500/50" },

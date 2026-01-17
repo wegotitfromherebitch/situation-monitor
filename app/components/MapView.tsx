@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 import { scaleLinear } from "d3-scale";
 import { EventItem } from '../lib/events';
-import { useTheme } from 'next-themes';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
 
@@ -16,10 +15,12 @@ interface MapViewProps {
 export function MapView({ events, onEventClick }: MapViewProps) {
     const [zoom, setZoom] = useState(1);
 
-    // Color scale relative to severity
-    const colorScale = scaleLinear<string>()
-        .domain([0, 50, 100])
-        .range(["#10b981", "#f59e0b", "#ef4444"]);
+    // Color scale relative to severity - memoized to prevent recreation
+    const colorScale = useMemo(() =>
+        scaleLinear<string>()
+            .domain([0, 50, 100])
+            .range(["#10b981", "#f59e0b", "#ef4444"]),
+        []);
 
     const markers = useMemo(() => {
         return events.map(evt => ({
@@ -136,17 +137,22 @@ export function MapView({ events, onEventClick }: MapViewProps) {
 
             {/* Scanning Line Overlay - Command Center Aesthetic */}
             <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
-                <div className="w-full h-[2px] bg-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.5)] absolute top-0 animate-[scan_8s_linear_infinite]" />
+                <div
+                    className="w-full h-[2px] bg-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.5)] absolute"
+                    style={{
+                        animation: 'scan 8s linear infinite'
+                    }}
+                />
             </div>
 
-            style jsx{`
-        @keyframes scan {
-          0% { top: -10%; opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { top: 110%; opacity: 0; }
-        }
-      `}
+            <style>{`
+                @keyframes scan {
+                    0% { top: -10%; opacity: 0; }
+                    10% { opacity: 1; }
+                    90% { opacity: 1; }
+                    100% { top: 110%; opacity: 0; }
+                }
+            `}</style>
         </div>
     );
 }
