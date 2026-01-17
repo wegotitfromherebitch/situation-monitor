@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, memo } from 'react';
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup, Graticule, Sphere } from "react-simple-maps";
 import { scaleLinear } from "d3-scale";
 import { Plus, Minus, RefreshCw } from 'lucide-react';
@@ -13,6 +13,47 @@ interface MapViewProps {
     onEventClick?: (event: EventItem) => void;
     className?: string; // Allow className prop for sizing
 }
+
+const WorldMap = memo(() => (
+    <>
+        {/* Dark Globe Background */}
+        <Sphere stroke="none" strokeWidth={0} fill="#09090b" id="ocean" />
+
+        {/* Subtle Grid Lines */}
+        <Graticule stroke="#27272a" strokeWidth={0.5} />
+
+        <Geographies geography={geoUrl}>
+            {({ geographies }) =>
+                geographies.map((geo) => (
+                    <Geography
+                        key={geo.rsmKey}
+                        geography={geo}
+                        style={{
+                            default: {
+                                fill: "#18181b", // Dark Zinc
+                                stroke: "#3f3f46", // Slight contrast border
+                                strokeWidth: 0.5,
+                                outline: "none",
+                            },
+                            hover: {
+                                fill: "#27272a",
+                                stroke: "#52525b",
+                                strokeWidth: 0.7,
+                                outline: "none",
+                            },
+                            pressed: {
+                                fill: "#27272a",
+                                outline: "none",
+                            },
+                        }}
+                    />
+                ))
+            }
+        </Geographies>
+    </>
+));
+
+WorldMap.displayName = "WorldMap";
 
 export function MapView({ events, onEventClick, className }: MapViewProps) {
     const [zoom, setZoom] = useState(1);
@@ -91,40 +132,7 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
                         if (evt.coordinates) setCenter(evt.coordinates);
                     }}
                 >
-                    {/* Dark Globe Background */}
-                    <Sphere stroke="none" strokeWidth={0} fill="#09090b" id="ocean" />
-
-                    {/* Subtle Grid Lines */}
-                    <Graticule stroke="#27272a" strokeWidth={0.5} />
-
-                    <Geographies geography={geoUrl}>
-                        {({ geographies }) =>
-                            geographies.map((geo) => (
-                                <Geography
-                                    key={geo.rsmKey}
-                                    geography={geo}
-                                    style={{
-                                        default: {
-                                            fill: "#18181b", // Dark Zinc
-                                            stroke: "#3f3f46", // Slight contrast border
-                                            strokeWidth: 0.5,
-                                            outline: "none",
-                                        },
-                                        hover: {
-                                            fill: "#27272a",
-                                            stroke: "#52525b",
-                                            strokeWidth: 0.7,
-                                            outline: "none",
-                                        },
-                                        pressed: {
-                                            fill: "#27272a",
-                                            outline: "none",
-                                        },
-                                    }}
-                                />
-                            ))
-                        }
-                    </Geographies>
+                    <WorldMap />
 
                     {/* Seismic Layer (Subtle Rings) */}
                     {quakes.map((quake) => {
