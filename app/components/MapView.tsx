@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, memo } from 'react';
-import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup, Graticule, Sphere } from "react-simple-maps";
+import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup, Graticule, Sphere, Line } from "react-simple-maps";
 import { scaleLinear } from "d3-scale";
 import { Plus, Minus, RefreshCw } from 'lucide-react';
 import { EventItem } from '../lib/events';
@@ -197,6 +197,42 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
                             </Marker>
                         )
                     })}
+
+                    {/* Network Connections Layer */}
+                    {useMemo(() => {
+                        const lines: any[] = [];
+                        // Ensure we only use events with valid coordinates
+                        const validEvents = events.filter(e => e.coordinates && e.coordinates.length === 2);
+                        const categories = Array.from(new Set(validEvents.map(e => e.category)));
+
+                        categories.forEach(cat => {
+                            const catEvents = validEvents.filter(e => e.category === cat);
+                            // Link events in a chain
+                            for (let i = 0; i < catEvents.length - 1; i++) {
+                                lines.push({
+                                    from: catEvents[i],
+                                    to: catEvents[i + 1],
+                                    category: cat
+                                });
+                            }
+                        });
+                        return lines;
+                    }, [events]).map((line, i) => (
+                        <Line
+                            key={`conn-${i}`}
+                            from={[line.from.coordinates[1], line.from.coordinates[0]]}
+                            to={[line.to.coordinates[1], line.to.coordinates[0]]}
+                            stroke={
+                                line.category === 'SECURITY' ? '#ef4444' :
+                                    line.category === 'CYBER' ? '#06b6d4' :
+                                        line.category === 'MARKETS' ? '#10b981' : '#71717a'
+                            }
+                            strokeWidth={1 / zoom}
+                            strokeOpacity={0.2}
+                            strokeLinecap="round"
+                            className="pointer-events-none"
+                        />
+                    ))}
 
                     {/* Main Events (Pulsing Dots) */}
                     {markers.map((marker) => {
