@@ -46,7 +46,7 @@ export function EventCard({ event, onClick }: { event: EventItem; onClick: () =>
 
             {/* Main Content */}
             <div className="pl-0">
-                <h3 className="text-sm font-bold text-zinc-300 group-hover:text-white leading-tight font-mono mb-1">
+                <h3 className="text-sm font-bold text-zinc-300 group-hover:text-white leading-tight mb-1">
                     {displayTitleFor(event)}
                 </h3>
                 <p className="text-xs text-zinc-500 line-clamp-2 border-l border-zinc-800 pl-2">
