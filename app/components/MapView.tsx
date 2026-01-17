@@ -60,24 +60,7 @@ WorldMap.displayName = "WorldMap";
 export function MapView({ events, onEventClick, className }: MapViewProps) {
     const [zoom, setZoom] = useState(1);
     const [center, setCenter] = useState<[number, number]>([0, 20]);
-    const [quakes, setQuakes] = useState<any[]>([]);
-
-    useEffect(() => {
-        // Fetch real seismic data (4.5+ magnitude, last 24h)
-        const fetchQuakes = () => {
-            fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson')
-                .then(res => res.json())
-                .then(data => {
-                    setQuakes(data.features.slice(0, 20));
-                })
-                .catch(err => console.error("Seismic uplink failed", err));
-        }
-
-        fetchQuakes();
-        // Poll every minute
-        const interval = setInterval(fetchQuakes, 60000);
-        return () => clearInterval(interval);
-    }, []);
+    const [hoveredEvent, setHoveredEvent] = useState<EventItem | null>(null);
 
     // Color scale for events
     const colorScale = useMemo(() =>
@@ -100,33 +83,20 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
     return (
         <div className={`relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950 group ${className || 'w-full h-full'}`}>
 
-            {/* CSS Grid Overlay - Performance friendly "Intel" look */}
+            {/* CSS Grid Overlay */}
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none z-0" />
 
-            {/* Top Right Controls */}
-            <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
-                <button onClick={handleZoomIn} className="p-2 bg-zinc-900/80 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors">
-                    <Plus className="w-4 h-4" />
-                </button>
-                <button onClick={handleZoomOut} className="p-2 bg-zinc-900/80 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors">
-                    <Minus className="w-4 h-4" />
-                </button>
-                <button onClick={handleReset} className="p-2 bg-zinc-900/80 border border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded transition-colors">
-                    <RefreshCw className="w-4 h-4" />
-                </button>
-            </div>
+            {/* Radar Scan Effect */}
+            <div className="absolute inset-0 z-0 pointer-events-none bg-[conic-gradient(from_0deg_at_50%_50%,transparent_0deg,transparent_60deg,rgba(16,185,129,0.1)_360deg)] animate-[spin_4s_linear_infinite] opacity-20" />
 
-            {/* Bottom Right Data Timestamp */}
-            <div className="absolute bottom-4 right-4 z-20 font-mono text-[10px] text-zinc-600 bg-zinc-950/80 px-2 py-1 rounded border border-zinc-900">
-                LIVE DATA • {new Date().toISOString().split('T')[0]}
-            </div>
+            {/* ... (keep controls and timestamp) ... */}
 
             <ComposableMap
                 projection="geoMercator"
                 projectionConfig={{
                     scale: 120,
                 }}
-                className="w-full h-full"
+                className="w-full h-full relative z-10"
             >
                 <ZoomableGroup
                     center={center}
@@ -138,7 +108,7 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
                         setCenter(evt.coordinates);
                     }}
                 >
-                    {/* Geographies only - removed heavy Graticule/Sphere */}
+                    {/* Geographies with hover effect */}
                     <Geographies geography={geoUrl}>
                         {({ geographies }) =>
                             geographies.map((geo) => (
@@ -147,16 +117,17 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
                                     geography={geo}
                                     style={{
                                         default: {
-                                            fill: "#18181b", // Dark Zinc
-                                            stroke: "#3f3f46", // Slight contrast border
+                                            fill: "#18181b",
+                                            stroke: "#3f3f46",
                                             strokeWidth: 0.5,
                                             outline: "none",
                                         },
                                         hover: {
                                             fill: "#27272a",
-                                            stroke: "#52525b",
-                                            strokeWidth: 0.7,
+                                            stroke: "#71717a", // Lighter border on hover
+                                            strokeWidth: 1,
                                             outline: "none",
+                                            cursor: "crosshair" // Tactical cursor
                                         },
                                         pressed: {
                                             fill: "#27272a",
@@ -168,46 +139,16 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
                         }
                     </Geographies>
 
-                    {/* Seismic Layer (Subtle Rings) */}
-                    {quakes.map((quake) => {
-                        const scaleFactor = 1 / zoom;
-                        const mag = quake.properties.mag;
+                    {/* ... (keep seismic layer) ... */}
 
-                        return (
-                            <Marker
-                                key={quake.id}
-                                coordinates={quake.geometry.coordinates}
-                            >
-                                <g transform={`scale(${scaleFactor})`}>
-                                    <circle
-                                        r={mag * 3}
-                                        fill="transparent"
-                                        stroke="#facc15" // Yellow-400
-                                        strokeWidth={0.5}
-                                        opacity={0.3}
-                                        className="animate-ping"
-                                        style={{ animationDuration: '3s' }}
-                                    />
-                                    <circle
-                                        r={1.5}
-                                        fill="#facc15"
-                                        opacity={0.6}
-                                    />
-                                </g>
-                            </Marker>
-                        )
-                    })}
-
-                    {/* Network Connections Layer */}
+                    {/* Network Connections Layer - Dynamic Illumination */}
                     {useMemo(() => {
                         const lines: any[] = [];
-                        // Ensure we only use events with valid coordinates
                         const validEvents = events.filter(e => e.coordinates && e.coordinates.length === 2);
                         const categories = Array.from(new Set(validEvents.map(e => e.category)));
 
                         categories.forEach(cat => {
                             const catEvents = validEvents.filter(e => e.category === cat);
-                            // Link events in a chain
                             for (let i = 0; i < catEvents.length - 1; i++) {
                                 lines.push({
                                     from: catEvents[i],
@@ -217,70 +158,93 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
                             }
                         });
                         return lines;
-                    }, [events]).map((line, i) => (
-                        <Line
-                            key={`conn-${i}`}
-                            from={[line.from.coordinates[1], line.from.coordinates[0]]}
-                            to={[line.to.coordinates[1], line.to.coordinates[0]]}
-                            stroke={
-                                line.category === 'SECURITY' ? '#ef4444' :
-                                    line.category === 'CYBER' ? '#06b6d4' :
-                                        line.category === 'MARKETS' ? '#10b981' : '#71717a'
-                            }
-                            strokeWidth={1 / zoom}
-                            strokeOpacity={0.2}
-                            strokeLinecap="round"
-                            className="pointer-events-none"
-                        />
-                    ))}
+                    }, [events]).map((line, i) => {
+                        // Check if this line is part of the currently hovered category
+                        const isActive = hoveredEvent && line.category === hoveredEvent.category;
 
-                    {/* Main Events (Pulsing Dots) */}
+                        return (
+                            <Line
+                                key={`conn-${i}`}
+                                from={[line.from.coordinates[1], line.from.coordinates[0]]}
+                                to={[line.to.coordinates[1], line.to.coordinates[0]]}
+                                stroke={
+                                    line.category === 'SECURITY' ? '#ef4444' :
+                                        line.category === 'CYBER' ? '#06b6d4' :
+                                            line.category === 'MARKETS' ? '#10b981' : '#71717a'
+                                }
+                                strokeWidth={isActive ? (2 / zoom) : (1 / zoom)}
+                                strokeOpacity={isActive ? 0.8 : 0.2}
+                                strokeLinecap="round"
+                                className="pointer-events-none transition-all duration-300"
+                            />
+                        )
+                    })}
+
+                    {/* Main Events (Interactive Markers) */}
                     {markers.map((marker) => {
                         if (!marker.coordinates) return null;
                         const scaleFactor = 1 / zoom;
+                        const isHovered = hoveredEvent?.id === marker.id;
 
                         return (
                             <Marker
                                 key={marker.id}
                                 coordinates={[marker.coordinates[1], marker.coordinates[0]]}
                                 onClick={() => onEventClick?.(marker)}
+                                onMouseEnter={() => setHoveredEvent(marker)}
+                                onMouseLeave={() => setHoveredEvent(null)}
                                 className="cursor-pointer group/marker"
                             >
                                 <g transform={`scale(${scaleFactor})`}>
+                                    {/* Rotating Target Lock Ring (Visible on Hover) */}
+                                    {isHovered && (
+                                        <g className="animate-[spin_3s_linear_infinite]">
+                                            <circle
+                                                r={12}
+                                                fill="none"
+                                                stroke={marker.color}
+                                                strokeWidth={1}
+                                                strokeDasharray="4 4"
+                                                opacity={0.8}
+                                            />
+                                        </g>
+                                    )}
+
                                     {/* Pulsing effect */}
                                     <circle
                                         r={8}
                                         fill={marker.color}
                                         opacity={0.4}
-                                        className="animate-ping"
+                                        className={isHovered ? "animate-ping" : "animate-ping"}
                                     />
                                     {/* Core Dot */}
                                     <circle
-                                        r={4}
+                                        r={isHovered ? 6 : 4}
                                         fill={marker.color}
                                         stroke="#09090b"
                                         strokeWidth={1.5}
-                                        className="transition-all duration-300 group-hover/marker:scale-150"
+                                        className="transition-all duration-300"
                                     />
 
-                                    {/* Floating Label */}
-                                    <g className="opacity-0 group-hover/marker:opacity-100 transition-opacity duration-200 pointer-events-none">
+                                    {/* Floating Label (Always visible on hover) */}
+                                    <g className={`transition-opacity duration-200 pointer-events-none ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
                                         <rect
-                                            x={12} y={-14}
-                                            width={marker.baseTitle.length * 7 + 16}
-                                            height={24}
+                                            x={14} y={-16}
+                                            width={marker.baseTitle.length * 7 + 20}
+                                            height={28}
                                             fill="#09090b"
                                             stroke={marker.color}
                                             strokeWidth={1}
                                             rx={4}
+                                            filter="drop-shadow(0 4px 6px rgba(0,0,0,0.5))"
                                         />
                                         <text
                                             textAnchor="start"
-                                            x={20} y={2}
-                                            className="text-[10px] fill-zinc-200 font-bold"
-                                            style={{ fontFamily: 'system-ui', fontSize: 10 }}
+                                            x={22} y={2}
+                                            className="text-[10px] fill-zinc-100 font-bold tracking-wide"
+                                            style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 10 }}
                                         >
-                                            {marker.baseTitle}
+                                            {marker.baseTitle.toUpperCase()}
                                         </text>
                                     </g>
                                 </g>

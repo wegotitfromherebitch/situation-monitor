@@ -3,13 +3,17 @@ import { EventItem, displayTitleFor } from '../lib/events';
 
 interface ThreatPanelProps {
     topThreat?: EventItem;
+    onClick?: () => void;
 }
 
-export function ThreatPanel({ topThreat }: ThreatPanelProps) {
+export function ThreatPanel({ topThreat, onClick }: ThreatPanelProps) {
     if (!topThreat) return null;
 
     return (
-        <div className="relative overflow-hidden rounded-xl border border-red-500/30 bg-red-500/5 p-4 group cursor-pointer hover:bg-red-500/10 transition-colors">
+        <div
+            onClick={onClick}
+            className="relative overflow-hidden rounded-xl border border-red-500/30 bg-red-500/5 p-4 group cursor-pointer hover:bg-red-500/10 transition-colors"
+        >
             {/* Background Texture */}
             <div className="absolute inset-0 bg-[repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(239,68,68,0.03)_10px,rgba(239,68,68,0.03)_20px)] pointer-events-none" />
 

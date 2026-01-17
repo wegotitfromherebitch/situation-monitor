@@ -14,6 +14,7 @@ import { SystemStatus } from './components/SystemStatus';
 import { DetailPane } from './components/DetailPane';
 import { FilterDrawer, type FilterType } from './components/FilterDrawer';
 import { KeyboardHints } from './components/KeyboardHints';
+import { CommandCenterModal } from './components/CommandCenterModal';
 import { useSignals } from './lib/useSignals';
 
 export default function Dashboard() {
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'ALL' | Category>('ALL');
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>(null);
+  const [commandCenterEvent, setCommandCenterEvent] = useState<EventItem | null>(null);
 
   // Sync live events to local state
   useEffect(() => {
@@ -133,6 +135,12 @@ export default function Dashboard() {
       {/* Keyboard Hints */}
       <KeyboardHints />
 
+      {/* Command Center Modal */}
+      <CommandCenterModal
+        event={commandCenterEvent}
+        onClose={() => setCommandCenterEvent(null)}
+      />
+
       <AppHeader ticks={ticks} events={events} />
 
       <div className="max-w-7xl mx-auto px-4 py-6">
@@ -164,7 +172,10 @@ export default function Dashboard() {
 
             {/* Right Command Rail */}
             <div className="lg:col-span-1 flex flex-col gap-6 h-full">
-              <ThreatPanel topThreat={topThreat} />
+              <ThreatPanel
+                topThreat={topThreat}
+                onClick={() => setCommandCenterEvent(topThreat)}
+              />
 
               <SystemStatus />
 
