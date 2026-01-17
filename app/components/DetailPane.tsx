@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EventItem, displayTitleFor } from '../lib/events';
-import { X, Activity, Globe, Shield, Zap, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { X, Activity, Globe, Shield, Zap, TrendingUp, TrendingDown, Minus, FileText, Radio, Loader2, Check } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 
 interface DetailPaneProps {
     event: EventItem | null;
     onClose: () => void;
+    onAction?: (action: string, event: EventItem) => void;
 }
 
 // Generate dummy history data based on severity
@@ -24,7 +25,9 @@ const generateHistory = (severity: number) => {
     return data;
 };
 
-export function DetailPane({ event, onClose }: DetailPaneProps) {
+export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
+    const [actionState, setActionState] = useState<{ action: string; status: 'loading' | 'done' } | null>(null);
+
     // Esc key listener
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => {
@@ -157,13 +160,55 @@ export function DetailPane({ event, onClose }: DetailPaneProps) {
                             <div className="space-y-3">
                                 <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Protocol Actions</h3>
                                 <div className="grid grid-cols-1 gap-2">
-                                    <button className="w-full text-left px-4 py-3 bg-zinc-900/40 hover:bg-zinc-900 border border-white/5 hover:border-zinc-700 transition-all rounded-xl flex items-center justify-between group active:scale-[0.98]">
-                                        <span className="text-sm text-zinc-200">Generate Intelligence Report</span>
-                                        <div className="px-2 py-0.5 rounded bg-zinc-800 text-[10px] font-bold text-zinc-500 group-hover:text-zinc-100 transition-colors uppercase">Execute.pdf</div>
+                                    <button
+                                        onClick={() => {
+                                            if (!event) return;
+                                            setActionState({ action: 'report', status: 'loading' });
+                                            setTimeout(() => {
+                                                setActionState({ action: 'report', status: 'done' });
+                                                onAction?.('report', event);
+                                                setTimeout(() => setActionState(null), 2000);
+                                            }, 1500);
+                                        }}
+                                        disabled={actionState?.action === 'report'}
+                                        className="w-full text-left px-4 py-3 bg-zinc-900/40 hover:bg-zinc-900 border border-white/5 hover:border-zinc-700 transition-all rounded-xl flex items-center justify-between group active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                                    >
+                                        <span className="flex items-center gap-3">
+                                            {actionState?.action === 'report' ? (
+                                                actionState.status === 'loading' ? <Loader2 className="w-4 h-4 animate-spin text-zinc-400" /> : <Check className="w-4 h-4 text-emerald-500" />
+                                            ) : (
+                                                <FileText className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
+                                            )}
+                                            <span className="text-sm text-zinc-200">Generate Intelligence Report</span>
+                                        </span>
+                                        <div className="px-2 py-0.5 rounded bg-zinc-800 text-[10px] font-bold text-zinc-500 group-hover:text-zinc-100 transition-colors uppercase">
+                                            {actionState?.action === 'report' && actionState.status === 'done' ? 'Ready' : 'Execute.pdf'}
+                                        </div>
                                     </button>
-                                    <button className="w-full text-left px-4 py-3 bg-zinc-900/40 hover:bg-zinc-900 border border-white/5 hover:border-zinc-700 transition-all rounded-xl flex items-center justify-between group active:scale-[0.98]">
-                                        <span className="text-sm text-zinc-200">Signal Relay Uplink</span>
-                                        <div className="px-2 py-0.5 rounded bg-blue-500/10 text-[10px] font-bold text-blue-500 group-hover:bg-blue-500/20 transition-colors uppercase">Secure</div>
+                                    <button
+                                        onClick={() => {
+                                            if (!event) return;
+                                            setActionState({ action: 'uplink', status: 'loading' });
+                                            setTimeout(() => {
+                                                setActionState({ action: 'uplink', status: 'done' });
+                                                onAction?.('uplink', event);
+                                                setTimeout(() => setActionState(null), 2000);
+                                            }, 1200);
+                                        }}
+                                        disabled={actionState?.action === 'uplink'}
+                                        className="w-full text-left px-4 py-3 bg-zinc-900/40 hover:bg-zinc-900 border border-white/5 hover:border-zinc-700 transition-all rounded-xl flex items-center justify-between group active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                                    >
+                                        <span className="flex items-center gap-3">
+                                            {actionState?.action === 'uplink' ? (
+                                                actionState.status === 'loading' ? <Loader2 className="w-4 h-4 animate-spin text-blue-400" /> : <Check className="w-4 h-4 text-emerald-500" />
+                                            ) : (
+                                                <Radio className="w-4 h-4 text-blue-500 group-hover:text-blue-400 transition-colors" />
+                                            )}
+                                            <span className="text-sm text-zinc-200">Signal Relay Uplink</span>
+                                        </span>
+                                        <div className="px-2 py-0.5 rounded bg-blue-500/10 text-[10px] font-bold text-blue-500 group-hover:bg-blue-500/20 transition-colors uppercase">
+                                            {actionState?.action === 'uplink' && actionState.status === 'done' ? 'Synced' : 'Secure'}
+                                        </div>
                                     </button>
                                 </div>
                             </div>

@@ -1,15 +1,18 @@
 import { Search, Activity } from 'lucide-react';
+import { EventItem } from '../lib/events';
+import { ThreatHeartbeat } from './ThreatHeartbeat';
 
 interface AppHeaderProps {
     ticks: number;
+    events: EventItem[];
 }
 
-export function AppHeader({ ticks }: AppHeaderProps) {
+export function AppHeader({ ticks, events }: AppHeaderProps) {
     return (
         <header className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
             <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
                 <div className="flex items-center gap-3 group/logo cursor-pointer hover:scale-105 transition-transform">
-                    <div className="h-4 w-4 rounded-sm bg-gradient-to-tr from-emerald-500 to-emerald-300 shadow-[0_0:15px_rgba(16,185,129,0.4)] group-hover/logo:scale-110 transition-transform" />
+                    <div className="h-4 w-4 rounded-sm bg-gradient-to-tr from-emerald-500 to-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.4)] group-hover/logo:scale-110 transition-transform" />
                     <h1 className="font-bold text-lg tracking-tight text-zinc-100 group-hover/logo:text-white transition-colors">
                         SITUATION<span className="text-zinc-600">MONITOR</span>
                     </h1>
@@ -30,13 +33,18 @@ export function AppHeader({ ticks }: AppHeaderProps) {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs font-mono text-zinc-500">
-                    <div className="flex items-center gap-2">
+                <div className="flex items-center gap-5 text-xs font-mono text-zinc-500">
+                    {/* Global Threat Level Heartbeat */}
+                    <ThreatHeartbeat events={events} />
+
+                    <div className="hidden sm:block w-px h-4 bg-zinc-800" />
+
+                    <div className="hidden sm:flex items-center gap-2">
                         <Activity className="w-3.5 h-3.5" />
                         <span>NET: STABLE</span>
                     </div>
-                    <div className="hidden sm:block text-zinc-700">|</div>
-                    <div className="hidden sm:block">
+                    <div className="hidden lg:block text-zinc-700">|</div>
+                    <div className="hidden lg:block">
                         {ticks > 0 ? `${ticks}s since sync` : 'Syncing...'}
                     </div>
                 </div>
@@ -44,3 +52,4 @@ export function AppHeader({ ticks }: AppHeaderProps) {
         </header>
     );
 }
+

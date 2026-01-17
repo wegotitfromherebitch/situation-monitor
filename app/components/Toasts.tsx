@@ -1,5 +1,5 @@
 
-export type ToastTone = 'neutral' | 'danger' | 'good';
+export type ToastTone = 'neutral' | 'danger' | 'good' | 'success';
 export type ToastItem = { id: string; title: string; message?: string; tone: ToastTone };
 
 export function Toasts({ items, onDismiss }: { items: ToastItem[]; onDismiss: (id: string) => void }) {
@@ -12,7 +12,7 @@ export function Toasts({ items, onDismiss }: { items: ToastItem[]; onDismiss: (i
                         "rounded-xl border bg-zinc-950/70 backdrop-blur px-4 py-3 shadow-[0_0_0_1px_rgba(255,255,255,0.05)] " +
                         (t.tone === 'danger'
                             ? 'border-red-500/25'
-                            : t.tone === 'good'
+                            : (t.tone === 'good' || t.tone === 'success')
                                 ? 'border-emerald-500/25'
                                 : 'border-zinc-800')
                     }
@@ -25,7 +25,7 @@ export function Toasts({ items, onDismiss }: { items: ToastItem[]; onDismiss: (i
                                         "inline-flex h-2 w-2 rounded-full " +
                                         (t.tone === 'danger'
                                             ? 'bg-red-500 animate-pulse'
-                                            : t.tone === 'good'
+                                            : (t.tone === 'good' || t.tone === 'success')
                                                 ? 'bg-emerald-500'
                                                 : 'bg-zinc-500')
                                     }

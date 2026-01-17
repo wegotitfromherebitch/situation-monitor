@@ -12,6 +12,8 @@ import { EventList } from './components/EventList';
 import { GlobalMap } from './components/GlobalMap';
 import { SystemStatus } from './components/SystemStatus';
 import { DetailPane } from './components/DetailPane';
+import { FilterDrawer, type FilterType } from './components/FilterDrawer';
+import { KeyboardHints } from './components/KeyboardHints';
 
 export default function Dashboard() {
   const [events, setEvents] = useState<EventItem[]>(EVENTS);
@@ -19,8 +21,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [activeTab, setActiveTab] = useState<'ALL' | Category>('ALL');
-
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const [activeFilter, setActiveFilter] = useState<FilterType>(null);
 
   // "Hydrate" effect
   useEffect(() => {
@@ -70,6 +72,10 @@ export default function Dashboard() {
     setSelectedEvent(event);
   };
 
+  const handleFilter = (filter: FilterType) => {
+    setActiveFilter(filter);
+  };
+
   // Largest threat for panel
   const topThreat = [...events].sort((a, b) => b.severity - a.severity)[0];
 
@@ -83,15 +89,44 @@ export default function Dashboard() {
       <Toasts items={toasts} onDismiss={removeToast} />
 
       {/* Detail View for Clicked Event */}
-      <DetailPane event={selectedEvent} onClose={() => setSelectedEvent(null)} />
+      <DetailPane
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+        onAction={(action, event) => {
+          if (action === 'report') {
+            addToast({
+              title: 'REPORT GENERATED',
+              message: `Intelligence brief for ${displayTitleFor(event)} is ready for download.`,
+              tone: 'success',
+            });
+          } else if (action === 'uplink') {
+            addToast({
+              title: 'UPLINK SYNCHRONIZED',
+              message: `Signal relay for ${event.region} sector established.`,
+              tone: 'success',
+            });
+          }
+        }}
+      />
 
-      <AppHeader ticks={ticks} />
+      {/* Filter Drawer for Stat Cards */}
+      <FilterDrawer
+        filter={activeFilter}
+        events={events}
+        onClose={() => setActiveFilter(null)}
+        onEventClick={handleEventClick}
+      />
+
+      {/* Keyboard Hints */}
+      <KeyboardHints />
+
+      <AppHeader ticks={ticks} events={events} />
 
       <div className="max-w-7xl mx-auto px-4 py-6">
 
         <div className="flex flex-col gap-6">
 
-          <StatsRow events={events} setActiveTab={setActiveTab} />
+          <StatsRow events={events} setActiveTab={setActiveTab} onFilter={handleFilter} />
 
           {/* Ticker Feed - Full Width */}
           <LiveSignalFeed
