@@ -45,10 +45,9 @@ export async function GET() {
     try {
         // Query GDELT for recent high-impact events
         const queries = [
-            'conflict OR military OR attack',
-            'cyber attack OR ransomware OR hack',
-            'economic crisis OR market crash OR trade war',
-            'natural disaster OR climate emergency'
+            'conflict',
+            'economy',
+            'crisis'
         ];
 
         const allEvents: Array<{
@@ -66,56 +65,65 @@ export async function GET() {
             source: string;
         }> = [];
 
-        for (const query of queries.slice(0, 2)) { // Limit to 2 queries to avoid rate limiting
+        for (const query of queries) {
             const params = new URLSearchParams({
                 query: query,
-                mode: 'artlist',
-                maxrecords: '10',
+                maxrecords: '15',
                 format: 'json',
-                sort: 'hybridrel', // Relevance + recency
-                timespan: '24h'
+                sort: 'DateDesc'
             });
 
-            const response = await fetch(`${GDELT_API}?${params}`, {
-                headers: {
-                    'Accept': 'application/json',
-                },
-                next: { revalidate: 60 } // Cache for 60 seconds
-            });
+            try {
+                const response = await fetch(`${GDELT_API}?${params}`, {
+                    headers: { 'Accept': 'application/json' },
+                    next: { revalidate: 60 } // Cache for 60 seconds
+                });
 
-            if (!response.ok) {
-                console.error(`GDELT API error: ${response.status}`);
-                continue;
-            }
-
-            const data = await response.json();
-
-            if (data.articles) {
-                for (const article of data.articles.slice(0, 5)) {
-                    const id = `gdelt-${Buffer.from(article.url || '').toString('base64').slice(0, 12)}`;
-
-                    // Skip if we already have this event
-                    if (allEvents.some(e => e.id === id)) continue;
-
-                    const category = themeToCategory(article.segtitle || query);
-                    const tone = parseFloat(article.tone) || -15;
-                    const artCount = parseInt(article.socialshares) || 5;
-
-                    allEvents.push({
-                        id,
-                        title: (article.title || 'Emerging situation').slice(0, 60),
-                        category,
-                        severity: calculateSeverity(tone, artCount),
-                        region: extractRegion(article.url || '', article.title || ''),
-                        summary: (article.segtitle || article.title || 'Intelligence analysis pending.').slice(0, 200),
-                        confidence: Math.abs(tone) > 30 ? 'HIGH' : Math.abs(tone) > 15 ? 'MED' : 'LOW',
-                        updatedMinutesAgo: Math.floor(Math.random() * 60), // Approximate
-                        lat: 0, // Would need geocoding
-                        lng: 0,
-                        momentum: tone < -20 ? 'UP' : tone > 10 ? 'DOWN' : 'FLAT',
-                        source: new URL(article.url || 'https://gdeltproject.org').hostname
-                    });
+                if (!response.ok) {
+                    console.warn(`GDELT API returned ${response.status} for query: ${query}`);
+                    continue;
                 }
+
+                const text = await response.text();
+                // GDELT sometimes returns invalid JSON or HTML on error
+                if (!text.startsWith('{')) {
+                    console.warn('GDELT returned non-JSON response');
+                    continue;
+                }
+
+                const data = JSON.parse(text);
+
+                if (data.articles && Array.isArray(data.articles)) {
+                    for (const article of data.articles.slice(0, 5)) {
+                        // Safe ID generation without Buffer
+                        const safeUrl = article.url || Math.random().toString();
+                        const id = `gdelt-${btoa(safeUrl).slice(0, 12).replace(/[^a-zA-Z0-9]/g, '')}`;
+
+                        if (allEvents.some(e => e.id === id)) continue;
+
+                        const category = themeToCategory(article.segtitle || query);
+                        const tone = parseFloat(article.tone) || -15;
+                        const artCount = parseInt(article.socialshares) || 5;
+
+                        allEvents.push({
+                            id,
+                            title: (article.title || 'Emerging situation').slice(0, 60),
+                            category,
+                            severity: calculateSeverity(tone, artCount),
+                            region: extractRegion(article.url || '', article.title || ''),
+                            summary: (article.segtitle || article.title || 'Intelligence analysis pending.').slice(0, 200),
+                            confidence: Math.abs(tone) > 30 ? 'HIGH' : Math.abs(tone) > 15 ? 'MED' : 'LOW',
+                            updatedMinutesAgo: Math.floor(Math.random() * 60), // Approximate
+                            lat: 0, // Would need geocoding
+                            lng: 0,
+                            momentum: tone < -20 ? 'UP' : tone > 10 ? 'DOWN' : 'FLAT',
+                            source: new URL(article.url || 'https://gdeltproject.org').hostname
+                        });
+                    }
+                }
+            } catch (innerErr) {
+                console.error(`Error processing query ${query}:`, innerErr);
+                continue;
             }
         }
 
@@ -127,11 +135,12 @@ export async function GET() {
         });
 
     } catch (error) {
-        console.error('GDELT fetch error:', error);
+        console.error('Critical GDELT fetch error:', error);
+        // Return structured error but don't fail 500 to keep UI alive
         return NextResponse.json({
             success: false,
-            error: 'Failed to fetch live intelligence',
+            error: 'Failed to fetch upstream intelligence',
             events: []
-        }, { status: 500 });
+        }, { status: 200 }); // Return 200 so hook handles it as "no events" rather than crash
     }
 }

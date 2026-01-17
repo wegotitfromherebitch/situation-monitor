@@ -39,8 +39,11 @@ export function useSignals(options: UseSignalsOptions = {}): UseSignalsReturn {
 
             if (data.success && data.events?.length > 0) {
                 // Merge real events with mock events for a fuller dashboard
-                const realEvents: EventItem[] = data.events.map((e: EventItem) => ({
+                const realEvents: EventItem[] = data.events.map((e: any) => ({
                     ...e,
+                    baseTitle: e.title || 'Unknown Signal',
+                    titleOverride: e.title || 'Unknown Signal',
+                    category: e.category.toUpperCase(),
                     // Ensure all required fields are present
                     lat: e.lat || (Math.random() * 140 - 70),
                     lng: e.lng || (Math.random() * 360 - 180),

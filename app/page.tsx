@@ -14,8 +14,14 @@ import { SystemStatus } from './components/SystemStatus';
 import { DetailPane } from './components/DetailPane';
 import { FilterDrawer, type FilterType } from './components/FilterDrawer';
 import { KeyboardHints } from './components/KeyboardHints';
+import { useSignals } from './lib/useSignals';
 
 export default function Dashboard() {
+  const { events: liveEvents, isLoading: isSignalsLoading } = useSignals({
+    interval: 30000,
+    useMockFallback: false
+  });
+
   const [events, setEvents] = useState<EventItem[]>(EVENTS);
   const [ticks, setTicks] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -23,6 +29,13 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'ALL' | Category>('ALL');
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>(null);
+
+  // Sync live events to local state
+  useEffect(() => {
+    if (liveEvents.length > 0) {
+      setEvents(liveEvents);
+    }
+  }, [liveEvents]);
 
   // "Hydrate" effect
   useEffect(() => {
@@ -80,7 +93,7 @@ export default function Dashboard() {
   const topThreat = [...events].sort((a, b) => b.severity - a.severity)[0];
 
   if (loading) {
-    return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-600 font-mono">loading uplink...</div>;
+    return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-600 font-mono">INITIALIZING UPLINK...</div>;
   }
 
   return (
@@ -145,7 +158,7 @@ export default function Dashboard() {
               <GlobalMap
                 events={events}
                 onEventClick={handleEventClick}
-                className="min-h-[750px] w-full shadow-2xl shadow-emerald-900/5 sm:h-[80vh]"
+                className="min-h-[750px] w-full shadow-2xl shadow-emerald-900/5 sm:h-[80vh] border border-white/5 rounded-3xl overflow-hidden bg-zinc-900/20"
               />
             </div>
 

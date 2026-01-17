@@ -39,14 +39,53 @@
 }
 
 body {
-  background: var(--background);
   color: var(--foreground);
+  background: var(--background);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   background-image:
     linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
     linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
   background-size: 100% 2px, 3px 100%;
+}
+
+/* Authentic HUD styling */
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.hud-card {
+  @apply relative bg-zinc-950/80 border border-zinc-800/60 overflow-hidden;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.hud-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(16, 185, 129, 0.5) 50%, transparent 100%);
+  opacity: 0.5;
+}
+
+.hud-scanline {
+  background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.3) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+/* Corner brackets for tech feel */
+.hud-brackets::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 12px;
+  height: 12px;
+  border-bottom: 2px solid rgba(16, 185, 129, 0.3);
+  border-right: 2px solid rgba(16, 185, 129, 0.3);
 }
 
 /* Technical Panels (HUD style) */
