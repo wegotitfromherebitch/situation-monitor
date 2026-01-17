@@ -97,6 +97,7 @@ export default function Dashboard() {
           <LiveSignalFeed
             events={events}
             onSignal={handleSignal}
+            onCardClick={handleEventClick}
             mode="ticker"
             maxCards={6}
             className="w-full"

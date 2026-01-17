@@ -21,9 +21,9 @@ export function EventCard({ event, onClick }: { event: EventItem; onClick: () =>
     return (
         <div
             onClick={onClick}
-            className="group relative border-b border-zinc-900 hover:bg-zinc-900/40 transition-all cursor-pointer py-4 px-2 first:pt-2"
+            className="group relative border-b border-white/5 hover:bg-zinc-900/60 transition-all cursor-pointer py-4 px-2 first:pt-2 active:scale-[0.99]"
         >
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 group-hover:translate-x-1 transition-transform duration-300">
                 {/* Meta Row: Cat • Time • Sev */}
                 <div className="flex items-center justify-between text-xs mb-0.5">
                     <div className="flex items-center gap-2">
