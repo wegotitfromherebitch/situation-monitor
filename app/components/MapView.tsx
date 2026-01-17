@@ -86,9 +86,9 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
                     zoom={zoom}
                     maxZoom={5}
                     minZoom={0.7}
-                    onMove={({ zoom }) => {
-                        setZoom(zoom);
-                        // setCenter(coordinates); // Simplify to just tracking zoom for now to avoid type error
+                    onMove={(evt: any) => {
+                        if (evt.zoom) setZoom(evt.zoom);
+                        if (evt.coordinates) setCenter(evt.coordinates);
                     }}
                 >
                     {/* Dark Globe Background */}
