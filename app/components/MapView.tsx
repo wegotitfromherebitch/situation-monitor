@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { ComposableMap, Geographies, Geography, Marker, ZoomableGroup } from "react-simple-maps";
 import { scaleLinear } from "d3-scale";
 import { EventItem } from '../lib/events';
@@ -14,23 +14,6 @@ interface MapViewProps {
 
 export function MapView({ events, onEventClick }: MapViewProps) {
     const [zoom, setZoom] = useState(1);
-    const [quakes, setQuakes] = useState<any[]>([]);
-
-    useEffect(() => {
-        // Fetch real seismic data from USGS (4.5+ magnitude, last 24h)
-        const fetchQuakes = () => {
-            fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson')
-                .then(res => res.json())
-                .then(data => {
-                    setQuakes(data.features.slice(0, 15)); // Take top 15 to keep map clean
-                })
-                .catch(err => console.error("Seismic uplink failed", err));
-        }
-
-        fetchQuakes();
-        const interval = setInterval(fetchQuakes, 60000); // Update every minute
-        return () => clearInterval(interval);
-    }, []);
 
     // Color scale relative to severity - memoized to prevent recreation
     const colorScale = useMemo(() =>
@@ -48,6 +31,10 @@ export function MapView({ events, onEventClick }: MapViewProps) {
 
     return (
         <div className="w-full h-full bg-zinc-950 relative overflow-hidden rounded-xl border border-zinc-900 group">
+
+            {/* Grid Overlay */}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none z-0" />
+
             <ComposableMap
                 projection="geoMercator"
                 projectionConfig={{
@@ -70,19 +57,19 @@ export function MapView({ events, onEventClick }: MapViewProps) {
                                     geography={geo}
                                     style={{
                                         default: {
-                                            fill: "#09090b", // zinc-950 (darker)
+                                            fill: "#18181b", // zinc-900
                                             stroke: "#27272a", // zinc-800
                                             strokeWidth: 0.5,
                                             outline: "none",
                                         },
                                         hover: {
-                                            fill: "#18181b",
+                                            fill: "#27272a",
                                             stroke: "#3f3f46",
                                             strokeWidth: 0.7,
                                             outline: "none",
                                         },
                                         pressed: {
-                                            fill: "#18181b",
+                                            fill: "#27272a",
                                             outline: "none",
                                         },
                                     }}
@@ -90,50 +77,6 @@ export function MapView({ events, onEventClick }: MapViewProps) {
                             ))
                         }
                     </Geographies>
-
-                    {/* Seismic Layer (Real-time USGS Data) */}
-                    {quakes.map((quake) => {
-                        // Counter-scale factor
-                        const scaleFactor = 1 / zoom;
-                        const mag = quake.properties.mag;
-
-                        return (
-                            <Marker
-                                key={quake.id}
-                                coordinates={quake.geometry.coordinates}
-                            >
-                                <g transform={`scale(${scaleFactor})`}>
-                                    {/* Static ring */}
-                                    <circle
-                                        r={mag * 2.5}
-                                        fill="transparent"
-                                        stroke="#71717a"
-                                        strokeWidth={0.5}
-                                        opacity={0.4}
-                                    />
-                                    {/* Ping Effect */}
-                                    <circle
-                                        r={mag * 4}
-                                        fill="transparent"
-                                        stroke="#52525b"
-                                        strokeWidth={0.3}
-                                        opacity={0.2}
-                                        className="animate-ping"
-                                        style={{ animationDuration: '4s' }}
-                                    />
-                                    {/* Tiny label on hover */}
-                                    <text
-                                        y={-8}
-                                        textAnchor="middle"
-                                        className="text-[6px] fill-zinc-500 opacity-0 group-hover/marker:opacity-100 font-mono"
-                                        style={{ fontSize: 6 }}
-                                    >
-                                        M{mag}
-                                    </text>
-                                </g>
-                            </Marker>
-                        )
-                    })}
 
                     {markers.map((marker) => {
                         if (!marker.coordinates) return null;
@@ -191,6 +134,25 @@ export function MapView({ events, onEventClick }: MapViewProps) {
                     })}
                 </ZoomableGroup>
             </ComposableMap>
+
+            {/* Scanning Line Overlay - Command Center Aesthetic */}
+            <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+                <div
+                    className="w-full h-[2px] bg-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.5)] absolute"
+                    style={{
+                        animation: 'scan 8s linear infinite'
+                    }}
+                />
+            </div>
+
+            <style>{`
+                @keyframes scan {
+                    0% { top: -10%; opacity: 0; }
+                    10% { opacity: 1; }
+                    90% { opacity: 1; }
+                    100% { top: 110%; opacity: 0; }
+                }
+            `}</style>
         </div>
     );
 }
