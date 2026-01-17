@@ -55,6 +55,18 @@ const WorldMap = memo(() => (
 
 WorldMap.displayName = "WorldMap";
 
+// Basic throttle utility
+function throttle(func: Function, limit: number) {
+    let inThrottle: boolean;
+    return function (this: any, ...args: any[]) {
+        if (!inThrottle) {
+            func.apply(this, args);
+            inThrottle = true;
+            setTimeout(() => inThrottle = false, limit);
+        }
+    }
+}
+
 export function MapView({ events, onEventClick, className }: MapViewProps) {
     const [zoom, setZoom] = useState(1);
     const [center, setCenter] = useState<[number, number]>([0, 20]);
@@ -75,6 +87,13 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
         const interval = setInterval(fetchQuakes, 60000);
         return () => clearInterval(interval);
     }, []);
+
+    // Throttled handler for map movement to prevent render thrashing
+    // Using simple 30ms throttle (~30fps) for state updates
+    const handleMove = useMemo(() => throttle((evt: any) => {
+        if (evt.zoom) setZoom(evt.zoom);
+        if (evt.coordinates) setCenter(evt.coordinates);
+    }, 30), []);
 
     // Color scale for events
     const colorScale = useMemo(() =>
@@ -127,10 +146,7 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
                     zoom={zoom}
                     maxZoom={5}
                     minZoom={0.7}
-                    onMove={(evt: any) => {
-                        if (evt.zoom) setZoom(evt.zoom);
-                        if (evt.coordinates) setCenter(evt.coordinates);
-                    }}
+                    onMove={handleMove}
                 >
                     <WorldMap />
 
