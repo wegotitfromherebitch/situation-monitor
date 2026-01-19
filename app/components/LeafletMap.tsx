@@ -80,15 +80,24 @@ function MapControls() {
 
 const createEventIcon = (color: string, isSecurity: boolean) => {
     const size = isSecurity ? 18 : 12;
-    const ringSize = isSecurity ? 32 : 20;
+    const ringSize = isSecurity ? 48 : 32; // Larger radar signature
 
     // Larger invisible hit container
-    const containerSize = 40;
+    const containerSize = 60;
 
     const html = `
         <div class="relative flex items-center justify-center w-full h-full">
-            <div class="absolute rounded-full opacity-30 animate-ping" style="width: ${ringSize}px; height: ${ringSize}px; background-color: ${color}"></div>
-            <div class="relative rounded-full border-[1.5px] border-black/80 shadow-sm" style="width: ${size}px; height: ${size}px; background-color: ${color}; box-shadow: 0 0 10px ${color}80;"></div>
+            <!-- Slow Radar Ripple 1 -->
+            <div class="absolute rounded-full opacity-20 animate-[ping_3s_linear_infinite]" 
+                 style="width: ${ringSize}px; height: ${ringSize}px; background-color: ${color}; animation-duration: 3s;"></div>
+            
+             <!-- Slow Radar Ripple 2 (Delayed) -->
+            <div class="absolute rounded-full opacity-20 animate-[ping_3s_linear_infinite]" 
+                 style="width: ${ringSize}px; height: ${ringSize}px; background-color: ${color}; animation-duration: 3s; animation-delay: 1.5s"></div>
+            
+            <!-- Core Dot -->
+            <div class="relative rounded-full border border-black/50 shadow-sm" 
+                 style="width: ${size}px; height: ${size}px; background-color: ${color}; box-shadow: 0 0 15px ${color};"></div>
         </div>
     `;
 
@@ -96,7 +105,7 @@ const createEventIcon = (color: string, isSecurity: boolean) => {
         className: 'bg-transparent',
         html: html,
         iconSize: [containerSize, containerSize],
-        iconAnchor: [containerSize / 2, containerSize / 2] // Perfectly centered
+        iconAnchor: [containerSize / 2, containerSize / 2]
     });
 };
 
