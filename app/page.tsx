@@ -140,7 +140,7 @@ export default function Home() {
           {/* Map Header Overlay */}
           <div className="absolute top-4 left-4 z-20 pointer-events-none">
             <div className="text-xs text-emerald-500 border border-emerald-500/30 px-2 py-1 bg-black/50 backdrop-blur-sm inline-block mb-1 font-mono tracking-wider">
-              LIVE SATELLITE FEED
+              LIVE
             </div>
             <div className="text-[10px] text-zinc-400 font-mono">SECTOR 4 // NORTH ATLANTIC</div>
           </div>

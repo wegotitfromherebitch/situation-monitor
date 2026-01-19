@@ -22,6 +22,7 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
     const [militaryAssets, setMilitaryAssets] = useState<MilitaryAsset[]>([]);
     const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
     const [quakes, setQuakes] = useState<any[]>([]);
+    const [isAssetListExpanded, setIsAssetListExpanded] = useState(false);
 
     // Initialize military assets
     useEffect(() => {
@@ -95,20 +96,43 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none z-10" />
 
             {/* Legend / Status Layer */}
-            <div className="absolute bottom-4 left-4 z-20 pointer-events-none">
-                <div className="flex flex-col gap-2">
-                    {militaryAssets.slice(0, 3).map(asset => (
-                        <div key={asset.id} className="bg-zinc-950/80 border border-blue-500/30 p-2 rounded flex items-center gap-3 backdrop-blur-sm animate-in slide-in-from-left fade-in duration-500">
+            <div className="absolute bottom-4 left-4 z-20 pointer-events-auto flex flex-col-reverse items-start gap-2">
+
+                {/* Toggle Button / Summary */}
+                <button
+                    onClick={() => setIsAssetListExpanded(!isAssetListExpanded)}
+                    className="bg-zinc-950/90 border border-zinc-800 hover:border-zinc-600 hover:bg-zinc-900 px-3 py-2 rounded text-[10px] text-zinc-400 font-mono flex items-center gap-2 transition-all shadow-lg backdrop-blur-md group"
+                >
+                    <span className={isAssetListExpanded ? "rotate-180 transition-transform" : "transition-transform"}>
+                        {isAssetListExpanded ? '▼' : '▲'}
+                    </span>
+                    <span>{militaryAssets.length} ASSETS TRACKING</span>
+                </button>
+
+                {/* The List (Expands Upwards) */}
+                <div className={`flex flex-col-reverse gap-2 transition-all duration-300 origin-bottom ${isAssetListExpanded ? 'opacity-100 scale-100 max-h-[400px]' : 'max-h-0 opacity-0 scale-95 pointer-events-none'}`}>
+                    {militaryAssets.map(asset => (
+                        <div
+                            key={asset.id}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedAssetId(asset.id);
+                            }}
+                            className={`
+                                p-2 rounded flex items-center gap-3 backdrop-blur-sm cursor-pointer transition-all border shadow-lg w-[220px]
+                                ${selectedAssetId === asset.id
+                                    ? 'bg-blue-900/40 border-blue-500/50 text-white translate-x-1'
+                                    : 'bg-zinc-950/90 border-blue-500/20 text-zinc-400 hover:bg-zinc-900 hover:border-blue-500/40 hover:text-zinc-200'
+                                }
+                            `}
+                        >
                             {asset.type === 'AIRCRAFT' ? <Plane className="w-3 h-3 text-cyan-400" /> : <Ship className="w-3 h-3 text-blue-500" />}
-                            <div className="flex flex-col">
-                                <span className="text-[9px] font-bold text-cyan-500 font-mono tracking-wider">{asset.callsign}</span>
-                                <span className="text-[8px] text-zinc-400 font-mono">{asset.status} // {asset.coordinates[0].toFixed(2)}, {asset.coordinates[1].toFixed(2)}</span>
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-[9px] font-bold font-mono tracking-wider truncate">{asset.callsign}</span>
+                                <span className="text-[8px] opacity-70 font-mono truncate">{asset.status} // {asset.coordinates[0].toFixed(2)}, {asset.coordinates[1].toFixed(2)}</span>
                             </div>
                         </div>
                     ))}
-                    <div className="bg-zinc-950/80 border border-zinc-800 p-2 rounded text-[9px] text-zinc-500 font-mono">
-                        + {militaryAssets.length - 3} ASSETS TRACKING
-                    </div>
                 </div>
             </div>
 
