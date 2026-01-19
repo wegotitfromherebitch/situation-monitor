@@ -145,27 +145,45 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
                                 </div>
                             </div>
 
-                            {/* Chart */}
-                            <div className="h-64 w-full bg-zinc-900/20 hud-card p-4 relative">
-                                <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mb-4 font-mono">Severity Trend (24h)</div>
-                                <ResponsiveContainer width="100%" height="90%">
-                                    <LineChart data={historyData}>
-                                        <XAxis dataKey="time" hide />
-                                        <YAxis domain={[0, 100]} hide />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', fontSize: '12px', borderRadius: '0px', fontFamily: 'JetBrains Mono' }}
-                                            itemStyle={{ color: '#e4e4e7' }}
-                                        />
-                                        <Line
-                                            type="monotone"
-                                            dataKey="value"
-                                            stroke={event.severity > 75 ? '#ef4444' : event.severity > 50 ? '#f59e0b' : '#10b981'}
-                                            strokeWidth={2}
-                                            dot={false}
-                                            animationDuration={1500}
-                                        />
-                                    </LineChart>
-                                </ResponsiveContainer>
+                            {/* Source Intel Link */}
+                            <div className="space-y-4">
+                                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-mono pl-1 border-l-2 border-blue-500/50">Verified Source Intel</h3>
+
+                                {event.url ? (
+                                    <div className="hud-card p-0 overflow-hidden group relative">
+                                        <div className="bg-zinc-900/50 p-4 border-b border-zinc-800">
+                                            <div className="flex items-center gap-3 mb-2">
+                                                <div className="p-1.5 bg-blue-500/10 rounded border border-blue-500/20">
+                                                    <Globe className="w-4 h-4 text-blue-400" />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs text-zinc-300 font-bold font-mono">EXTERNAL_WICKET_OPEN</span>
+                                                    <span className="text-[10px] text-zinc-500 font-mono truncate max-w-[250px]">{event.url}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-6 bg-black/20 flex flex-col items-center justify-center gap-4 text-center">
+                                            <p className="text-xs text-zinc-500 max-w-[80%] font-mono">
+                                                Direct connection to external intelligence source established.
+                                                Secure channel ready for access.
+                                            </p>
+                                            <button
+                                                onClick={() => window.open(event.url, '_blank')}
+                                                className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold font-mono tracking-wider uppercase rounded transition-colors flex items-center gap-2 shadow-lg shadow-blue-900/20"
+                                            >
+                                                ACCESS SOURCE MATERIAL <Check className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="hud-card p-4 border-l-2 border-zinc-700 bg-zinc-900/10">
+                                        <div className="flex items-center gap-3 text-zinc-500">
+                                            <Shield className="w-4 h-4" />
+                                            <span className="text-xs font-mono">NO EXTERNAL INTELLIGENCE LINKED</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Actions */}
@@ -222,21 +240,6 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
                                             {actionState?.action === 'uplink' && actionState.status === 'done' ? 'Connected' : 'ACTIVATE_FEED'}
                                         </div>
                                     </button>
-
-                                    {event.url && (
-                                        <button
-                                            onClick={() => window.open(event.url, '_blank')}
-                                            className="w-full text-left px-4 py-3 bg-zinc-900/40 hover:bg-zinc-900 border border-white/5 hover:border-zinc-700 transition-all rounded-none flex items-center justify-between group active:scale-[0.98] hud-card"
-                                        >
-                                            <span className="flex items-center gap-3">
-                                                <Globe className="w-4 h-4 text-cyan-500 group-hover:text-cyan-400 transition-colors" />
-                                                <span className="text-sm text-zinc-200 font-mono">VIEW_DATA_SOURCE</span>
-                                            </span>
-                                            <div className="px-2 py-0.5 bg-cyan-500/10 text-[10px] font-bold text-cyan-500 group-hover:bg-cyan-500/20 transition-colors uppercase font-mono">
-                                                EXTERNAL_LINK
-                                            </div>
-                                        </button>
-                                    )}
                                 </div>
                             </div>
 
