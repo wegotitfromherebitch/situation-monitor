@@ -36,26 +36,39 @@ function MapControls() {
     };
 
     return (
-        <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-1">
+        <div
+            className="absolute top-4 right-4 z-[2000] flex flex-col gap-1"
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+        >
             <button
-                onClick={handleZoomIn}
-                className="p-2.5 bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-600 rounded-lg transition-all active:scale-95 shadow-lg group"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleZoomIn();
+                }}
+                className="p-2.5 bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-600 rounded-lg transition-all active:scale-95 shadow-lg group cursor-pointer"
             >
                 <Plus className="w-5 h-5 group-active:scale-110 ease-out duration-75" />
             </button>
-            <div className="text-center text-[10px] font-mono text-zinc-500 py-1 select-none">
+            <div className="text-center text-[10px] font-mono text-zinc-500 py-1 select-none bg-black/50 rounded backdrop-blur-sm mx-1">
                 {Math.round((zoom / 18) * 100)}%
             </div>
             <button
-                onClick={handleZoomOut}
-                className="p-2.5 bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-600 rounded-lg transition-all active:scale-95 shadow-lg group"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleZoomOut();
+                }}
+                className="p-2.5 bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-600 rounded-lg transition-all active:scale-95 shadow-lg group cursor-pointer"
             >
                 <Minus className="w-5 h-5 group-active:scale-110 ease-out duration-75" />
             </button>
             <div className="mt-2" />
             <button
-                onClick={handleReset}
-                className="p-2.5 bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-600 rounded-lg transition-all active:scale-95 shadow-lg group"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    handleReset();
+                }}
+                className="p-2.5 bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-600 rounded-lg transition-all active:scale-95 shadow-lg group cursor-pointer"
             >
                 <RefreshCw className="w-5 h-5 group-active:rotate-180 transition-transform duration-500" />
             </button>
@@ -131,8 +144,8 @@ export default function LeafletMap({ events, militaryAssets, quakes, onEventClic
         <MapContainer
             center={[20, 0]}
             zoom={2}
-            scrollWheelZoom={false}
-            touchZoom={false}
+            scrollWheelZoom={true}
+            touchZoom={true}
             style={{ width: '100%', height: '100%', background: '#020617' }}
             ref={setMap}
             zoomControl={false} // Disable default zoom controls
