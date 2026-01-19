@@ -136,6 +136,19 @@ interface LeafletMapProps {
 export default function LeafletMap({ events, militaryAssets, quakes, onEventClick, selectedAssetId, setSelectedAssetId }: LeafletMapProps) {
     const [map, setMap] = useState<L.Map | null>(null);
 
+    // Fly to selected asset
+    useEffect(() => {
+        if (!map || !selectedAssetId) return;
+
+        const asset = militaryAssets.find(a => a.id === selectedAssetId);
+        if (asset) {
+            map.flyTo([asset.coordinates[0], asset.coordinates[1]], 8, {
+                animate: true,
+                duration: 1.5
+            });
+        }
+    }, [map, selectedAssetId, militaryAssets]);
+
     // Calculate connections
 
 
