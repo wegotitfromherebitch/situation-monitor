@@ -145,11 +145,11 @@ export default function Home() {
             <div className="text-[10px] text-zinc-400 font-mono">SECTOR 4 // NORTH ATLANTIC</div>
           </div>
 
-          {/* The Actual Map */}
           <div className="absolute inset-0 bg-zinc-950">
             <GlobalMap
-              events={filteredEvents}
+              events={selectedEvent ? [selectedEvent] : filteredEvents}
               onEventClick={setSelectedEvent}
+              focused={!!selectedEvent}
               className="w-full h-full border-none bg-transparent rounded-none"
             />
           </div>

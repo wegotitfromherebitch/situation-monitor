@@ -16,13 +16,36 @@ interface MapViewProps {
     events: EventItem[];
     onEventClick?: (event: EventItem) => void;
     className?: string; // Allow className prop for sizing
+    focused?: boolean;
 }
 
-export function MapView({ events, onEventClick, className }: MapViewProps) {
+export function MapView({ events, onEventClick, className, focused }: MapViewProps) {
     const [militaryAssets, setMilitaryAssets] = useState<MilitaryAsset[]>([]);
     const [selectedAssetId, setSelectedAssetId] = useState<string | null>(null);
     const [quakes, setQuakes] = useState<any[]>([]);
     const [isAssetListExpanded, setIsAssetListExpanded] = useState(false);
+
+    // ISOLATION LOGIC:
+    // 1. If an asset is selected locally, SHOW ONLY THAT ASSET. Hide everything else.
+    // 2. If 'focused' is true (Event Selected), SHOW ONLY THAT EVENT. Hide assets/quakes.
+    // 3. Otherwise show everything.
+
+    const visibleAssets = useMemo(() => {
+        if (selectedAssetId) return militaryAssets.filter(a => a.id === selectedAssetId);
+        if (focused) return []; // Hide assets if focusing on an event
+        return militaryAssets;
+    }, [militaryAssets, selectedAssetId, focused]);
+
+    const visibleQuakes = useMemo(() => {
+        if (selectedAssetId || focused) return []; // Hide quakes if focusing on anything
+        return quakes;
+    }, [quakes, selectedAssetId, focused]);
+
+    const visibleEvents = useMemo(() => {
+        if (selectedAssetId) return []; // Hide events if focusing on an asset
+        return events;
+    }, [events, selectedAssetId]);
+
 
     // Initialize military assets
     useEffect(() => {
@@ -116,7 +139,7 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
                             key={asset.id}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedAssetId(asset.id);
+                                setSelectedAssetId(selectedAssetId === asset.id ? null : asset.id);
                             }}
                             className={`
                                 p-2 rounded flex items-center gap-3 backdrop-blur-sm cursor-pointer transition-all border shadow-lg w-[220px]
@@ -144,9 +167,9 @@ export function MapView({ events, onEventClick, className }: MapViewProps) {
             {/* The Actual Map */}
             <div className="w-full h-full relative z-0">
                 <LeafletMap
-                    events={events}
-                    militaryAssets={militaryAssets}
-                    quakes={quakes}
+                    events={visibleEvents}
+                    militaryAssets={visibleAssets}
+                    quakes={visibleQuakes}
                     onEventClick={onEventClick}
                     selectedAssetId={selectedAssetId}
                     setSelectedAssetId={setSelectedAssetId}
