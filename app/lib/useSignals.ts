@@ -26,6 +26,25 @@ export function useSignals(options: UseSignalsOptions = {}): UseSignalsReturn {
     const [error, setError] = useState<string | null>(null);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
+    // SMARTER SEVERITY CALCULATOR
+    const getSmartSeverity = (text: string, baseSeverity: number): number => {
+        const t = text.toLowerCase();
+
+        // Tier 1: Existential / Catastrophic
+        if (t.includes('nuclear') || t.includes('biohazard') || t.includes('pandemic') || t.includes('mass casualty')) return Math.max(baseSeverity, 95);
+
+        // Tier 2: Kinetic / Critical
+        if (t.includes('war') || t.includes('invasion') || t.includes('airstrike') || t.includes('explosion') || t.includes('assassination')) return Math.max(baseSeverity, 85);
+
+        // Tier 3: High Tension / Cyber
+        if (t.includes('crisis') || t.includes('emergency') || t.includes('cyber') || t.includes('ransomware') || t.includes('breach')) return Math.max(baseSeverity, 75);
+
+        // Tier 4: Unrest / Economic
+        if (t.includes('protest') || t.includes('riot') || t.includes('crash') || t.includes('sanctions')) return Math.max(baseSeverity, 65);
+
+        return baseSeverity;
+    };
+
     const fetchSignals = useCallback(async () => {
         try {
             setIsLoading(true);
@@ -44,6 +63,8 @@ export function useSignals(options: UseSignalsOptions = {}): UseSignalsReturn {
                     baseTitle: e.title || 'Unknown Signal',
                     titleOverride: e.title || 'Unknown Signal',
                     category: e.category.toUpperCase(),
+                    // Smart Severity Upgrade
+                    severity: getSmartSeverity((e.title || '') + ' ' + (e.summary || ''), e.severity || 30),
                     // DO NOT generate random coordinates. Map users only want verified locations.
                     // If lat/lng is 0/0, we leave coordinates undefined/invalid so they don't show on map.
                     coordinates: (e.lat && e.lng) ? [e.lat, e.lng] : undefined
