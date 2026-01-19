@@ -8,14 +8,16 @@ interface GlassCardProps {
     className?: string;
     delay?: number;
     variant?: "standard" | "hud"; // New variant prop
+    onClick?: () => void;
 }
 
-export function GlassCard({ children, className, delay = 0, variant = "standard" }: GlassCardProps) {
+export function GlassCard({ children, className, delay = 0, variant = "standard", onClick }: GlassCardProps) {
     return (
         <motion.div
             initial={{ opacity: 0, y: 10 }} // Less movement, faster feel
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: delay, ease: "easeOut" }}
+            onClick={onClick}
             className={cn(
                 "relative overflow-hidden border backdrop-blur-md",
                 // VARIANT LOGIC:

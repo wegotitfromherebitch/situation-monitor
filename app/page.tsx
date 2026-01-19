@@ -72,13 +72,19 @@ export default function Home() {
           { label: "ACTIVE ZONES", val: activeZones.toString(), icon: Globe, color: "text-amber-500" },
           { label: "SYSTEM LATENCY", val: "24ms", icon: Zap, color: "text-emerald-400" },
         ].map((stat, i) => (
-          <GlassCard key={i} variant="hud" className="h-16 md:h-20 flex items-center px-4" delay={0.1 + (i * 0.05)}>
+          <GlassCard
+            key={i}
+            variant="hud"
+            className="h-16 md:h-20 flex items-center px-4 cursor-pointer hover:bg-white/5 active:scale-95 transition-all group"
+            delay={0.1 + (i * 0.05)}
+            onClick={() => console.log(`Clicked ${stat.label}`)}
+          >
             <div className="flex justify-between items-center w-full">
               <div>
-                <div className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest mb-0.5 md:mb-1">{stat.label}</div>
-                <div className={`text-xl md:text-2xl font-bold leading-none ${stat.color}`}>{stat.val}</div>
+                <div className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest mb-0.5 md:mb-1 group-hover:text-emerald-500 transition-colors">{stat.label}</div>
+                <div className={`text-xl md:text-2xl font-bold leading-none ${stat.color} group-hover:text-white transition-colors`}>{stat.val}</div>
               </div>
-              <stat.icon className={`w-4 h-4 ${stat.color} opacity-50`} />
+              <stat.icon className={`w-4 h-4 ${stat.color} opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all`} />
             </div>
           </GlassCard>
         ))}
