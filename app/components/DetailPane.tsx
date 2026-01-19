@@ -37,6 +37,16 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
         return () => window.removeEventListener('keydown', handleEsc);
     }, [onClose]);
 
+    // Lock body scroll when modal is open
+    useEffect(() => {
+        if (event) {
+            document.body.style.overflow = 'hidden';
+            return () => {
+                document.body.style.overflow = 'unset';
+            };
+        }
+    }, [event]);
+
     // Memoize history data based on event id and severity
     const historyData = useMemo(() =>
         event ? generateHistory(event.severity) : [],
@@ -54,7 +64,7 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[45]"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90]"
                     />
 
                     <motion.div
@@ -62,7 +72,7 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
                         animate={{ x: 0 }}
                         exit={{ x: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed top-0 right-0 h-full w-full sm:w-[500px] bg-zinc-950/95 backdrop-blur-2xl border-l border-white/5 shadow-2xl z-50 overflow-y-auto"
+                        className="fixed top-0 right-0 h-full w-full sm:w-[500px] bg-zinc-950/95 backdrop-blur-2xl border-l border-white/5 shadow-2xl z-[100] overflow-y-auto"
                     >
                         {/* Header */}
                         <div className="sticky top-0 bg-zinc-950/80 backdrop-blur-md z-10 p-6 border-b border-white/5 flex justify-between items-start">
