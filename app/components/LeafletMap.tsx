@@ -236,6 +236,43 @@ export default function LeafletMap({ events, militaryAssets, quakes, onEventClic
                 );
             })}
 
+            {/* Target Overlay for Isolated Event */}
+            {events.length === 1 && events[0].coordinates && (
+                <Marker
+                    position={[events[0].coordinates[0], events[0].coordinates[1]]}
+                    icon={L.divIcon({
+                        className: 'bg-transparent pointer-events-none',
+                        html: `
+                            <div class="relative w-[120px] h-[120px] flex items-center justify-center -translate-x-1/2 -translate-y-1/2">
+                                <!-- Rotating Outer Ring -->
+                                <div class="absolute inset-0 border border-emerald-500/30 rounded-full animate-[spin_4s_linear_infinite]"></div>
+                                
+                                <!-- Counter-Rotating Inner Ring/Brackets -->
+                                <div class="absolute inset-4 border-2 border-dashed border-emerald-500/50 rounded-full animate-[spin_6s_linear_infinite_reverse]"></div>
+                                
+                                <!-- Pulse Background -->
+                                <div class="absolute w-2 h-2 bg-emerald-500 rounded-full animate-ping"></div>
+
+                                <!-- Corner Brackets -->
+                                <div class="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-emerald-400"></div>
+                                <div class="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-emerald-400"></div>
+                                <div class="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-emerald-400"></div>
+                                <div class="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-emerald-400"></div>
+                                
+                                <!-- Label -->
+                                <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-emerald-500 font-bold tracking-widest bg-black/50 px-2 py-0.5 rounded whitespace-nowrap">
+                                    TARGET LOCKED
+                                </div>
+                            </div>
+                        `,
+                        iconSize: [120, 120],
+                        iconAnchor: [60, 60]
+                    })}
+                    interactive={false}
+                    zIndexOffset={100}
+                />
+            )}
+
             {/* Military Assets */}
             {militaryAssets.map(asset => (
                 <Marker
