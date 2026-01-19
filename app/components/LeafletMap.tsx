@@ -79,21 +79,21 @@ function MapControls() {
 // --- Custom Icons via L.divIcon ---
 
 const createEventIcon = (color: string, isSecurity: boolean) => {
-    const size = isSecurity ? 14 : 10; // Slightly smaller core
-    const ringSize = isSecurity ? 32 : 24; // Tighter, cleaner radar ring
+    const size = isSecurity ? 12 : 8; // Smaller, sharper core
+    const haloSize = isSecurity ? 24 : 16; // Stable, non-expanding halo
 
-    // Container matches ring size to prevent offset issues
-    const containerSize = 40;
+    // Container matches halo size
+    const containerSize = 30;
 
     const html = `
         <div class="relative flex items-center justify-center w-full h-full">
-            <!-- Single smooth radar ripple -->
-            <div class="absolute rounded-full opacity-25 animate-ping" 
-                 style="width: ${ringSize}px; height: ${ringSize}px; background-color: ${color}; animation-duration: 3s; animation-timing-function: ease-out;"></div>
+            <!-- Static Glow Halo (No Animation) -->
+            <div class="absolute rounded-full opacity-20" 
+                 style="width: ${haloSize}px; height: ${haloSize}px; background-color: ${color};"></div>
             
-            <!-- Solid Core Dot -->
-            <div class="relative rounded-full border border-black/60 shadow-sm" 
-                 style="width: ${size}px; height: ${size}px; background-color: ${color}; box-shadow: 0 0 10px ${color}60;"></div>
+            <!-- Breathing Core Dot -->
+            <div class="relative rounded-full border border-black/80 shadow-sm animate-pulse" 
+                 style="width: ${size}px; height: ${size}px; background-color: ${color}; box-shadow: 0 0 5px ${color};"></div>
         </div>
     `;
 
