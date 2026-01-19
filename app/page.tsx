@@ -79,7 +79,8 @@ export default function Home() {
             icon: Radio,
             color: "text-white",
             action: () => setFilter('ALL'),
-            active: filter === 'ALL'
+            active: filter === 'ALL',
+            activeClass: "border-white/20 bg-white/5 shadow-[0_0_15px_rgba(255,255,255,0.05)]"
           },
           {
             label: "CRITICAL THREATS",
@@ -87,15 +88,17 @@ export default function Home() {
             icon: ShieldAlert,
             color: "text-rose-500",
             action: () => setFilter('CRITICAL'),
-            active: filter === 'CRITICAL'
+            active: filter === 'CRITICAL',
+            activeClass: "border-rose-500/50 bg-rose-500/10 shadow-[0_0_15px_rgba(244,63,94,0.1)]"
           },
           {
             label: "ACTIVE ZONES",
             val: activeZones.toString(),
             icon: Globe,
             color: "text-amber-500",
-            action: () => setFilter('ALL'), // Reset for now
-            active: false
+            action: () => setFilter('ALL'), // Acts as reset
+            active: false,
+            activeClass: "border-amber-500/50 bg-amber-500/10"
           },
           {
             label: "SYSTEM LATENCY",
@@ -103,15 +106,16 @@ export default function Home() {
             icon: Zap,
             color: "text-emerald-400",
             action: () => refresh(),
-            active: false
+            active: false,
+            activeClass: "border-emerald-500/50 bg-emerald-500/10"
           },
         ].map((stat, i) => (
           <GlassCard
             key={i}
             variant="hud"
             className={cn(
-              "h-16 md:h-20 flex items-center px-4 cursor-pointer transition-all group",
-              stat.active ? "bg-white/10 border-emerald-500/50" : "hover:bg-white/5 active:scale-95"
+              "h-16 md:h-20 flex items-center px-4 cursor-pointer transition-all duration-300 group",
+              stat.active ? stat.activeClass : "hover:bg-white/5 active:scale-95 border-transparent"
             )}
             delay={0.1 + (i * 0.05)}
             onClick={stat.action}
@@ -120,7 +124,7 @@ export default function Home() {
               <div>
                 <div className={cn(
                   "text-[9px] md:text-[10px] uppercase tracking-widest mb-0.5 md:mb-1 transition-colors",
-                  stat.active ? "text-emerald-400" : "text-zinc-500 group-hover:text-emerald-500"
+                  stat.active ? "text-white font-bold" : "text-zinc-500 group-hover:text-emerald-500"
                 )}>
                   {stat.label}
                 </div>
