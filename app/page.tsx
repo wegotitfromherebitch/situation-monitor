@@ -19,7 +19,7 @@ import { useSignals } from './lib/useSignals';
 
 export default function Dashboard() {
   const { events: liveEvents, isLoading: isSignalsLoading } = useSignals({
-    interval: 30000,
+    interval: 120000,
     useMockFallback: false
   });
 
@@ -164,6 +164,7 @@ export default function Dashboard() {
             {/* Main Stage: Map (Hero) */}
             <div className="lg:col-span-3 relative">
               <GlobalMap
+                key="global-map-v2"
                 events={events}
                 onEventClick={handleEventClick}
                 className="min-h-[750px] w-full shadow-2xl shadow-emerald-900/5 sm:h-[80vh] border border-white/5 rounded-3xl overflow-hidden bg-zinc-900/20"

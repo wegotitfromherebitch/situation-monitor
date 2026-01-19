@@ -75,14 +75,17 @@ export function simulateSync(prev: EventItem[], tick: number): EventItem[] {
     if (!idxs.includes(i)) idxs.push(i);
   }
 
+  // Mutator logic
   const mutated = aged.map((e, i) => {
     if (!idxs.includes(i)) return e;
-    const delta = Math.round((Math.random() * 14 - 6));
-    const nextSev = clamp(e.severity + delta, 20, 98);
+    // Reduced volatility: -3 to +5 (slight upward bias to keep threats active)
+    const delta = Math.round((Math.random() * 8 - 3));
+    const nextSev = clamp(e.severity + delta, 25, 99);
     const nextMomentum = momentumForDelta(delta);
 
     let nextConfidence: EventItem["confidence"] = e.confidence;
-    if (Math.random() < 0.10) {
+    // Lower probability of confidence switching (5%)
+    if (Math.random() < 0.05) {
       nextConfidence = e.confidence === "LOW" ? "MED" : e.confidence === "MED" ? "HIGH" : "MED";
     }
 
@@ -91,14 +94,18 @@ export function simulateSync(prev: EventItem[], tick: number): EventItem[] {
       severity: nextSev,
       momentum: nextMomentum,
       confidence: nextConfidence,
-      summary: Math.random() < 0.25 ? jitterSummary(e.summary) : e.summary,
-      updatedMinutesAgo: Math.min(e.updatedMinutesAgo, 6),
+      // Lower probability of summary jitter (15%)
+      summary: Math.random() < 0.15 ? jitterSummary(e.summary) : e.summary,
+      // Reset updated timer more aggressively if it mutated
+      updatedMinutesAgo: 0,
     };
   });
 
-  const addNew = tick > 0 && tick % 5 === 0;
+  // Slow down new event generation (check every 8th tick instead of 5th)
+  // And only generate if we have fewer than 18 events to prevent overcrowding
+  const addNew = tick > 0 && tick % 8 === 0 && mutated.length < 18;
   if (addNew) {
-    return [generateNewEvent(tick), ...mutated].slice(0, 28);
+    return [generateNewEvent(tick), ...mutated].slice(0, 20); // Cap at 20
   }
 
   return mutated;

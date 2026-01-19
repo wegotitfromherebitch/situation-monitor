@@ -11,14 +11,17 @@ interface GlobalMapProps {
 export function GlobalMap({ events, onEventClick, className }: GlobalMapProps) {
     return (
         <div className={`rounded-xl border border-zinc-800 bg-zinc-900/20 relative overflow-hidden flex flex-col group ${className || 'h-[600px]'}`}>
-            <div className="absolute top-4 left-4 z-10 flex items-center gap-2 pointer-events-none">
+            <div className="absolute top-4 left-4 z-20 flex items-center gap-2 pointer-events-none">
                 <div className="p-1.5 bg-zinc-950/80 backdrop-blur rounded border border-zinc-800">
                     <Shield className="w-3.5 h-3.5 text-zinc-400" />
                 </div>
-                <span className="text-xs font-mono text-zinc-500 shadow-black drop-shadow-md">GLOBAL ACTIVITY MONITOR</span>
+                <div>
+                    <span className="block text-xs font-mono text-zinc-500 shadow-black drop-shadow-md">GLOBAL ACTIVITY MONITOR</span>
+                    <span className="block text-[9px] font-mono text-emerald-500 font-bold tracking-widest animate-pulse">● LIVE MILITARY FEED ACTIVE</span>
+                </div>
             </div>
 
-            <div className="flex-1 w-full h-full">
+            <div className="flex-1 w-full h-full relative z-10">
                 <MapView events={events} onEventClick={onEventClick} />
             </div>
 

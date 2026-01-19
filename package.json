@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@turf/turf": "^7.3.2",
     "@types/d3-scale": "^4.0.9",
     "@types/react-simple-maps": "^3.0.6",
     "clsx": "^2.1.1",
