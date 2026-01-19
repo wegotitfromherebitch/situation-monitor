@@ -42,7 +42,7 @@ export default function Home() {
     .slice(0, 15); // Show more events since we have a scroller
 
   return (
-    <main className="min-h-screen p-2 md:p-4 bg-[#020202] text-zinc-100 font-mono selection:bg-emerald-500/30 overflow-hidden flex flex-col">
+    <main className="h-screen max-h-screen p-2 md:p-4 bg-[#020202] text-zinc-100 font-mono selection:bg-emerald-500/30 overflow-hidden flex flex-col">
 
       {/* Detail View Overlay */}
       <DetailPane
