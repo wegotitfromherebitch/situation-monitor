@@ -19,11 +19,11 @@ function momentumForDelta(delta: number): "UP" | "FLAT" | "DOWN" {
 
 function jitterSummary(base: string) {
   const tails = [
-    "Signal density shifting.",
-    "Cross-source correlation pending.",
-    "Verification in progress.",
-    "Secondary indicators confirming.",
-    "Noise floor elevated; filter tightening.",
+    "Signals rising.",
+    "Awaiting verification.",
+    "Confirming reports.",
+    "Updates incoming.",
+    "Filtering noise.",
   ];
   return `${base} ${tails[Math.floor(Math.random() * tails.length)]}`;
 }
@@ -34,11 +34,11 @@ export function generateNewEvent(seed: number): EventItem {
   const regions = ["Middle East", "Eastern Europe", "South America", "Asia Pacific", "Global", "Africa", "North America"];
   const cats: Category[] = ["SECURITY", "STATE", "MARKETS", "CYBER", "CLIMATE"];
   const baseTitles = {
-    SECURITY: ["Airspace activity", "Maritime posture", "Border friction", "Kinetic chatter"],
-    STATE: ["Leadership contest", "Diplomatic rupture", "Sanctions pressure", "Election volatility"],
-    MARKETS: ["Rates repricing", "Energy volatility", "FX stress", "Credit widening"],
-    CYBER: ["DDoS amplification", "Ransomware lateral movement", "Data exfiltration", "ICS probing"],
-    CLIMATE: ["Rapid intensification", "Heat dome persistence", "Glacial outburst", "Crop failure warning"],
+    SECURITY: ["Aircraft tracking", "Naval movements", "Border clash", "Active combat reports"],
+    STATE: ["Political unrest", "Diplomatic breakdown", "Sanctions update", "Election riots"],
+    MARKETS: ["Interest rate hike", "Oil price surge", "Currency crash", "Bank run risk"],
+    CYBER: ["DDoS attack", "Ransomware spread", "Data breach", "Grid infrastructure hack"],
+    CLIMATE: ["Storm surge", "Heatwave warning", "Flood alert", "Crop failure"],
   } as const;
   const confidences: Array<EventItem["confidence"]> = ["LOW", "MED", "HIGH"];
 
@@ -58,7 +58,7 @@ export function generateNewEvent(seed: number): EventItem {
     momentum: "UP",
     region,
     coordinates: [coordsObj.lat, coordsObj.lon],
-    summary: jitterSummary("Fresh signal detected across monitored channels."),
+    summary: jitterSummary("New activity detected."),
     severity,
     confidence,
     updatedMinutesAgo: 0,
@@ -101,12 +101,10 @@ export function simulateSync(prev: EventItem[], tick: number): EventItem[] {
     };
   });
 
-  // Slow down new event generation (check every 8th tick instead of 5th)
-  // And only generate if we have fewer than 18 events to prevent overcrowding
-  const addNew = tick > 0 && tick % 8 === 0 && mutated.length < 18;
-  if (addNew) {
-    return [generateNewEvent(tick), ...mutated].slice(0, 20); // Cap at 20
-  }
+  // STABILIZATION PROTOCOL:
+  // User requested "no more shifting dots".
+  // We disable new event generation to keep the map stable.
+  // Only existing events will be mutated (severity/momentum).
 
   return mutated;
 }

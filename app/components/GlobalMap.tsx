@@ -17,7 +17,7 @@ export function GlobalMap({ events, onEventClick, className }: GlobalMapProps) {
                 </div>
                 <div>
                     <span className="block text-xs font-mono text-zinc-500 shadow-black drop-shadow-md">GLOBAL ACTIVITY MONITOR</span>
-                    <span className="block text-[9px] font-mono text-emerald-500 font-bold tracking-widest animate-pulse">● LIVE MILITARY FEED ACTIVE</span>
+                    <span className="block text-[9px] font-mono text-emerald-500 font-bold tracking-widest animate-pulse">● LIVE DATA STREAM ACTIVE</span>
                 </div>
             </div>
 

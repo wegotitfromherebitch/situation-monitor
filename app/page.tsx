@@ -66,8 +66,8 @@ export default function Dashboard() {
   const handleSignal = useCallback((s: LiveSignal) => {
     if (s.type === 'escalation') {
       addToast({
-        title: 'ESCALATION ALERT',
-        message: `${displayTitleFor(s.event)} in ${s.event.region} spiked by ${s.delta} points.`,
+        title: 'SEVERITY CHANGE',
+        message: `${displayTitleFor(s.event)} in ${s.event.region} severity increased by ${s.delta}.`,
         tone: 'danger',
       });
     } else if (s.type === 'new') {
@@ -95,7 +95,7 @@ export default function Dashboard() {
   const topThreat = [...events].sort((a, b) => b.severity - a.severity)[0];
 
   if (loading) {
-    return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-600 font-mono">INITIALIZING UPLINK...</div>;
+    return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-600 font-mono">LOADING DATA...</div>;
   }
 
   return (
@@ -116,8 +116,8 @@ export default function Dashboard() {
             });
           } else if (action === 'uplink') {
             addToast({
-              title: 'UPLINK SYNCHRONIZED',
-              message: `Signal relay for ${event.region} sector established.`,
+              title: 'FEED CONNECTED',
+              message: `Data feed for ${event.region} sector established.`,
               tone: 'success',
             });
           }

@@ -153,7 +153,7 @@ export function LiveSignalFeed({
                                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isPaused ? 'bg-zinc-500' : 'bg-emerald-500'}`}></span>
                                 <span className={`relative inline-flex rounded-full h-2 w-2 ${isPaused ? 'bg-zinc-500' : 'bg-emerald-500'}`}></span>
                             </div>
-                            <div className="text-[10px] tracking-[0.2em] font-bold text-zinc-400 uppercase">Live Uplink</div>
+                            <div className="text-[10px] tracking-[0.2em] font-bold text-zinc-400 uppercase">Live Data Feed</div>
                         </div>
                         <button
                             type="button"
@@ -172,7 +172,7 @@ export function LiveSignalFeed({
                                     <span className="w-1 h-2 bg-zinc-800 animate-pulse delay-150" />
                                     <span className="w-1 h-4 bg-zinc-800 animate-pulse delay-300" />
                                 </div>
-                                Initiating Signal Acquisition...
+                                Acquiring Data...
                             </div>
                         ) : (
                             <div className="relative h-full pl-2">

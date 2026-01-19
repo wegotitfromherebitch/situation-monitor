@@ -119,7 +119,7 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
 
                             {/* Analysis Block */}
                             <div className="space-y-4">
-                                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-mono pl-1 border-l-2 border-emerald-500/50">Situation Brief</h3>
+                                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-mono pl-1 border-l-2 border-emerald-500/50">Event Summary</h3>
                                 <div className="hud-card p-4 rounded-none border-l-2 border-zinc-700">
                                     <p className="text-zinc-300 leading-relaxed text-sm font-mono text-justify">
                                         {event.summary}
@@ -130,14 +130,14 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
                                         <Globe className="w-3.5 h-3.5 text-zinc-600" /> GEO: {event.region} confirmed
                                     </div>
                                     <div className="flex items-center gap-2 text-[10px] font-medium text-zinc-500 uppercase tracking-wider font-mono">
-                                        <Shield className="w-3.5 h-3.5 text-zinc-600" /> TRUST: {event.confidence} (Sync Active)
+                                        <Shield className="w-3.5 h-3.5 text-zinc-600" /> CONFIDENCE: {event.confidence} (Data Active)
                                     </div>
                                 </div>
                             </div>
 
                             {/* Chart */}
                             <div className="h-64 w-full bg-zinc-900/20 hud-card p-4 relative">
-                                <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mb-4 font-mono">Propagation Curve (24h)</div>
+                                <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest mb-4 font-mono">Severity Trend (24h)</div>
                                 <ResponsiveContainer width="100%" height="90%">
                                     <LineChart data={historyData}>
                                         <XAxis dataKey="time" hide />
@@ -160,7 +160,7 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
 
                             {/* Actions */}
                             <div className="space-y-3">
-                                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-mono">Protocol Actions</h3>
+                                <h3 className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-mono">Actions</h3>
                                 <div className="grid grid-cols-1 gap-2">
                                     <button
                                         onClick={() => {
@@ -181,10 +181,10 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
                                             ) : (
                                                 <FileText className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
                                             )}
-                                            <span className="text-sm text-zinc-200 font-mono">GENERATE_INTEL_REPORT</span>
+                                            <span className="text-sm text-zinc-200 font-mono">GENERATE_DATA_REPORT</span>
                                         </span>
                                         <div className="px-2 py-0.5 bg-zinc-800 text-[10px] font-bold text-zinc-500 group-hover:text-zinc-100 transition-colors uppercase font-mono">
-                                            {actionState?.action === 'report' && actionState.status === 'done' ? 'Ready' : 'EXECUTE.PDF'}
+                                            {actionState?.action === 'report' && actionState.status === 'done' ? 'Ready' : 'CREATE_PDF'}
                                         </div>
                                     </button>
                                     <button
@@ -206,10 +206,10 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
                                             ) : (
                                                 <Radio className="w-4 h-4 text-blue-500 group-hover:text-blue-400 transition-colors" />
                                             )}
-                                            <span className="text-sm text-zinc-200 font-mono">RELAY_UPLINK</span>
+                                            <span className="text-sm text-zinc-200 font-mono">CONNECT_FEED</span>
                                         </span>
                                         <div className="px-2 py-0.5 bg-blue-500/10 text-[10px] font-bold text-blue-500 group-hover:bg-blue-500/20 transition-colors uppercase font-mono">
-                                            {actionState?.action === 'uplink' && actionState.status === 'done' ? 'Synced' : 'SECURE_CHANNEL'}
+                                            {actionState?.action === 'uplink' && actionState.status === 'done' ? 'Connected' : 'ACTIVATE_FEED'}
                                         </div>
                                     </button>
 
@@ -220,7 +220,7 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
                                         >
                                             <span className="flex items-center gap-3">
                                                 <Globe className="w-4 h-4 text-cyan-500 group-hover:text-cyan-400 transition-colors" />
-                                                <span className="text-sm text-zinc-200 font-mono">ACCESS_SOURCE_FEED</span>
+                                                <span className="text-sm text-zinc-200 font-mono">VIEW_DATA_SOURCE</span>
                                             </span>
                                             <div className="px-2 py-0.5 bg-cyan-500/10 text-[10px] font-bold text-cyan-500 group-hover:bg-cyan-500/20 transition-colors uppercase font-mono">
                                                 EXTERNAL_LINK

@@ -9,7 +9,7 @@ export function SystemStatus() {
             </h3>
             <div className="space-y-4">
                 <div className="flex items-center justify-between text-sm">
-                    <span className="text-zinc-500">Uplink Latency</span>
+                    <span className="text-zinc-500">Latency</span>
                     <span className="font-mono text-emerald-400">24ms</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -17,14 +17,14 @@ export function SystemStatus() {
                     <span className="font-mono text-zinc-300">14/14</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                    <span className="text-zinc-500">Prediction Engine</span>
-                    <span className="font-mono text-amber-500">CALIBRATING</span>
+                    <span className="text-zinc-500">Risk Assessment</span>
+                    <span className="font-mono text-amber-500">ANALYZING</span>
                 </div>
 
                 <div className="h-px bg-zinc-800 my-2" />
 
                 <div className="text-xs text-zinc-600 leading-relaxed">
-                    System operating within nominal parameters. Automated threat detection confidence at 94%.
+                    System operating within normal limits. Detection accuracy currently at 94%.
                 </div>
             </div>
         </div>

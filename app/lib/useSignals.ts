@@ -38,23 +38,21 @@ export function useSignals(options: UseSignalsOptions = {}): UseSignalsReturn {
             const data = await response.json();
 
             if (data.success && data.events?.length > 0) {
-                // Merge real events with mock events for a fuller dashboard
+                // Merge real events (for lists/tickers) with hardcoded Map events
                 const realEvents: EventItem[] = data.events.map((e: any) => ({
                     ...e,
                     baseTitle: e.title || 'Unknown Signal',
                     titleOverride: e.title || 'Unknown Signal',
                     category: e.category.toUpperCase(),
-                    // Ensure all required fields are present
-                    lat: e.lat || (Math.random() * 140 - 70),
-                    lng: e.lng || (Math.random() * 360 - 180),
+                    // DO NOT generate random coordinates. Map users only want verified locations.
+                    // If lat/lng is 0/0, we leave coordinates undefined/invalid so they don't show on map.
+                    coordinates: (e.lat && e.lng) ? [e.lat, e.lng] : undefined
                 }));
 
-                // Keep some mock events for visual density, but prioritize real ones
-                const mockSubset = EVENTS.slice(0, Math.max(0, 10 - realEvents.length));
-                setEvents([...realEvents, ...mockSubset]);
+                // Always preserve the high-quality hardcoded "Points of Interest" for the map
+                setEvents([...EVENTS, ...realEvents]);
                 setError(null);
             } else if (useMockFallback) {
-                // Fall back to mock data if API returns empty
                 setEvents(EVENTS);
             }
 

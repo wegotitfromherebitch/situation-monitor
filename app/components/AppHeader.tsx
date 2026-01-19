@@ -27,7 +27,7 @@ export function AppHeader({ ticks, events }: AppHeaderProps) {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within/search:text-emerald-500 transition-colors" />
                         <input
                             type="text"
-                            placeholder="Query live intel..."
+                            placeholder="Search data..."
                             className="w-full bg-zinc-900/30 border border-zinc-800/50 rounded-lg py-1.5 pl-9 pr-4 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500/50 focus:bg-zinc-900 transition-all placeholder:text-zinc-700 hover:border-zinc-700"
                         />
                     </div>
@@ -41,11 +41,11 @@ export function AppHeader({ ticks, events }: AppHeaderProps) {
 
                     <div className="hidden sm:flex items-center gap-2">
                         <Activity className="w-3.5 h-3.5" />
-                        <span>NET: STABLE</span>
+                        <span>FEED: STABLE</span>
                     </div>
                     <div className="hidden lg:block text-zinc-700">|</div>
                     <div className="hidden lg:block">
-                        {ticks > 0 ? `${ticks}s since sync` : 'Syncing...'}
+                        {ticks > 0 ? `${ticks}s since update` : 'Updating...'}
                     </div>
                 </div>
             </div>

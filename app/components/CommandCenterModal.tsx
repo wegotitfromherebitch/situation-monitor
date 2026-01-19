@@ -65,13 +65,13 @@ export function CommandCenterModal({ event, onClose }: CommandCenterModalProps) 
                         <div className="flex items-center gap-4">
                             <div className={`w-3 h-3 rounded-full ${isCritical ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`} />
                             <div>
-                                <h1 className="text-sm font-bold tracking-[0.3em] text-zinc-400 uppercase font-mono">Mission Control // Priority Thread</h1>
-                                <div className="text-2xl font-bold text-white tracking-widest font-mono">CRITICAL INCIDENT RESPONSE</div>
+                                <h1 className="text-sm font-bold tracking-[0.3em] text-zinc-400 uppercase font-mono">Event Analysis</h1>
+                                <div className="text-2xl font-bold text-white tracking-widest font-mono">DETAILED MITIGATION RESPONSE</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-6">
                             <div className="text-right">
-                                <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">System Time</div>
+                                <div className="text-[10px] uppercase tracking-widest text-zinc-500 font-mono">Current Time</div>
                                 <div className="text-xl font-mono text-zinc-300 font-bold">{currentTime} UTC</div>
                             </div>
                             <button
@@ -89,7 +89,7 @@ export function CommandCenterModal({ event, onClose }: CommandCenterModalProps) 
                         {/* Left: Map Visualization */}
                         <div className="lg:col-span-2 relative border-r border-white/5 bg-zinc-900/20">
                             <div className="absolute top-4 left-4 z-20 bg-zinc-950/80 backdrop-blur border border-zinc-800 px-3 py-1.5 rounded text-xs font-mono text-zinc-400">
-                                <span className="text-zinc-500 mr-2">TARGET LOCK:</span>
+                                <span className="text-zinc-500 mr-2">SECTOR:</span>
                                 <span className="text-white">{event.region.toUpperCase()}</span>
                             </div>
                             <MapView
@@ -105,7 +105,7 @@ export function CommandCenterModal({ event, onClose }: CommandCenterModalProps) 
                             <div className={`p-8 border-b ${borderColor} ${bgColor}`}>
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-zinc-950/70 font-mono mix-blend-screen">
-                                        <Activity className="w-4 h-4" /> Threat Assessment
+                                        <Activity className="w-4 h-4" /> Severity Assessment
                                     </div>
                                     <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${borderColor} text-zinc-900 font-mono bg-white/20`}>
                                         {event.category}
@@ -129,7 +129,7 @@ export function CommandCenterModal({ event, onClose }: CommandCenterModalProps) 
                             <div className="p-8 space-y-8 flex-1">
 
                                 <div>
-                                    <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3 font-mono">Incident Report</h3>
+                                    <h3 className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-3 font-mono">Event Details</h3>
                                     <h2 className="text-2xl font-bold text-white mb-4 leading-tight">{title}</h2>
                                     <p className="text-zinc-400 leading-relaxed font-mono text-sm border-l-2 border-zinc-700 pl-4">
                                         {event.summary}
@@ -167,15 +167,15 @@ export function CommandCenterModal({ event, onClose }: CommandCenterModalProps) 
                                     onClick={() => event.url && window.open(event.url, '_blank')}
                                     disabled={!event.url}
                                     className={`w-full py-4 px-6 rounded-xl flex items-center justify-center gap-3 font-bold tracking-wider uppercase transition-all transform active:scale-[0.98] ${event.url
-                                            ? `bg-gradient-to-r ${isCritical ? 'from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-900/20' : 'from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-900/20'} text-white`
-                                            : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                                        ? `bg-gradient-to-r ${isCritical ? 'from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-900/20' : 'from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-900/20'} text-white`
+                                        : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
                                         }`}
                                 >
                                     <ExternalLink className="w-5 h-5" />
-                                    {event.url ? 'Access Live Intelligence Feed' : 'No External Uplink'}
+                                    {event.url ? 'View Data Source' : 'Source Unavailable'}
                                 </button>
                                 <div className="text-center mt-3">
-                                    <span className="text-[10px] text-zinc-600 font-mono">SECURE CONNECTION ESTABLISHED // ENCRYPTED</span>
+                                    <span className="text-[10px] text-zinc-600 font-mono">CONNECTION SECURE // ENCRYPTED</span>
                                 </div>
                             </div>
 

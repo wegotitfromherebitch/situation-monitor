@@ -41,10 +41,10 @@ const PIN_JITTER_ENABLED = false;
 
 const REGION_AREAS: Record<string, { center: LatLon; spread: { lat: number; lon: number } }> = {
     // --- SECURITY HOTSPOTS ---
-    "middle east": { center: { lat: 31.5, lon: 35.0 }, spread: { lat: 6.5, lon: 10 } }, // Levant + Iraq
-    "eastern europe": { center: { lat: 49.0, lon: 31.0 }, spread: { lat: 6, lon: 10 } }, // Ukraine / region
-    "south china sea": { center: { lat: 14.0, lon: 115.0 }, spread: { lat: 7, lon: 10 } },
-    "korean peninsula": { center: { lat: 36.2, lon: 127.9 }, spread: { lat: 2.2, lon: 2.8 } },
+    "middle east": { center: { lat: 31.5000, lon: 35.0000 }, spread: { lat: 6.5, lon: 10 } }, // Levant + Iraq
+    "eastern europe": { center: { lat: 48.0159, lon: 37.8028 }, spread: { lat: 6, lon: 10 } }, // Donbas focus
+    "south china sea": { center: { lat: 14.0000, lon: 115.0000 }, spread: { lat: 7, lon: 10 } },
+    "korean peninsula": { center: { lat: 36.2000, lon: 127.9000 }, spread: { lat: 2.2, lon: 2.8 } },
 
     // --- STATE ---
     "south america": { center: { lat: -15.0, lon: -58.0 }, spread: { lat: 10, lon: 14 } }, // Brazil/Andes spread
