@@ -187,14 +187,26 @@ export default function Home() {
                     onClick={() => setSelectedEvent(item)}
                   >
                     <div className="flex justify-between items-start pr-2">
+                      {/* Dynamic Time & Category */}
                       <div className="text-[9px] text-zinc-500 mb-0.5 font-mono truncate max-w-[70%]">
-                        09:4{i} // {item.category}
+                        {new Date(Date.now() - item.updatedMinutesAgo * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} // {item.category}
                       </div>
-                      {item.severity > 75 && (
-                        <span className="text-[8px] text-red-500 font-mono border border-red-500/30 px-1 rounded">ALERT</span>
+
+                      {/* Critical Label */}
+                      {item.severity >= 75 && (
+                        <span className="text-[8px] text-red-500 font-bold font-mono border border-red-500/30 bg-red-500/10 px-1 rounded animate-pulse">
+                          CRITICAL
+                        </span>
                       )}
                     </div>
-                    <div className="text-[10px] md:text-[11px] leading-snug text-zinc-300 group-hover:text-white transition-colors font-mono">
+
+                    {/* Title - Highlights red if critical */}
+                    <div className={cn(
+                      "text-[10px] md:text-[11px] leading-snug font-mono transition-colors",
+                      item.severity >= 75
+                        ? "text-rose-400 group-hover:text-rose-300 font-bold"
+                        : "text-zinc-300 group-hover:text-white"
+                    )}>
                       {displayTitleFor(item)}
                     </div>
                   </div>
