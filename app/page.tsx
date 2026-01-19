@@ -19,10 +19,16 @@ const getDefconLevel = (severity: number) => {
 };
 
 export default function Home() {
-  const { events, isLoading, lastUpdated } = useSignals({ interval: 10000 });
+  const { events, isLoading, lastUpdated, refresh } = useSignals({ interval: 10000 });
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const [filter, setFilter] = useState<'ALL' | 'CRITICAL'>('ALL');
 
-  // Derived Data
+  // Filter Logic
+  const filteredEvents = filter === 'CRITICAL'
+    ? events.filter(e => e.severity >= 75)
+    : events;
+
+  // Derived Data (from FULL event set for stats)
   const maxSeverity = events.length > 0 ? Math.max(...events.map(e => e.severity)) : 0;
   const threat = getDefconLevel(maxSeverity);
 
@@ -31,7 +37,7 @@ export default function Home() {
   const activeZones = new Set(events.map(e => e.region)).size;
 
   // Sort events for the feed
-  const feedEvents = [...events]
+  const feedEvents = [...filteredEvents]
     .sort((a, b) => b.severity - a.severity)
     .slice(0, 15); // Show more events since we have a scroller
 
@@ -67,21 +73,57 @@ export default function Home() {
       {/* 2. THE STAT ROW (Restoring the density from Screenshot 1) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2 shrink-0">
         {[
-          { label: "TOTAL SIGNALS", val: events.length.toString(), icon: Radio, color: "text-white" },
-          { label: "CRITICAL THREATS", val: criticalThreats.toString(), icon: AlertTriangle, color: "text-rose-500" },
-          { label: "ACTIVE ZONES", val: activeZones.toString(), icon: Globe, color: "text-amber-500" },
-          { label: "SYSTEM LATENCY", val: "24ms", icon: Zap, color: "text-emerald-400" },
+          {
+            label: "TOTAL SIGNALS",
+            val: events.length.toString(),
+            icon: Radio,
+            color: "text-white",
+            action: () => setFilter('ALL'),
+            active: filter === 'ALL'
+          },
+          {
+            label: "CRITICAL THREATS",
+            val: criticalThreats.toString(),
+            icon: ShieldAlert,
+            color: "text-rose-500",
+            action: () => setFilter('CRITICAL'),
+            active: filter === 'CRITICAL'
+          },
+          {
+            label: "ACTIVE ZONES",
+            val: activeZones.toString(),
+            icon: Globe,
+            color: "text-amber-500",
+            action: () => setFilter('ALL'), // Reset for now
+            active: false
+          },
+          {
+            label: "SYSTEM LATENCY",
+            val: "24ms",
+            icon: Zap,
+            color: "text-emerald-400",
+            action: () => refresh(),
+            active: false
+          },
         ].map((stat, i) => (
           <GlassCard
             key={i}
             variant="hud"
-            className="h-16 md:h-20 flex items-center px-4 cursor-pointer hover:bg-white/5 active:scale-95 transition-all group"
+            className={cn(
+              "h-16 md:h-20 flex items-center px-4 cursor-pointer transition-all group",
+              stat.active ? "bg-white/10 border-emerald-500/50" : "hover:bg-white/5 active:scale-95"
+            )}
             delay={0.1 + (i * 0.05)}
-            onClick={() => console.log(`Clicked ${stat.label}`)}
+            onClick={stat.action}
           >
             <div className="flex justify-between items-center w-full">
               <div>
-                <div className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest mb-0.5 md:mb-1 group-hover:text-emerald-500 transition-colors">{stat.label}</div>
+                <div className={cn(
+                  "text-[9px] md:text-[10px] uppercase tracking-widest mb-0.5 md:mb-1 transition-colors",
+                  stat.active ? "text-emerald-400" : "text-zinc-500 group-hover:text-emerald-500"
+                )}>
+                  {stat.label}
+                </div>
                 <div className={`text-xl md:text-2xl font-bold leading-none ${stat.color} group-hover:text-white transition-colors`}>{stat.val}</div>
               </div>
               <stat.icon className={`w-4 h-4 ${stat.color} opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all`} />
@@ -106,7 +148,7 @@ export default function Home() {
           {/* The Actual Map */}
           <div className="absolute inset-0 bg-zinc-950">
             <GlobalMap
-              events={events}
+              events={filteredEvents}
               onEventClick={setSelectedEvent}
               className="w-full h-full border-none bg-transparent rounded-none"
             />
