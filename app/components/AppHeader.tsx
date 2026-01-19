@@ -9,7 +9,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ ticks, events }: AppHeaderProps) {
     return (
-        <header className="sticky top-0 z-50 border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md">
+        <header className="fixed top-0 left-0 right-0 z-50 border-b border-zinc-800 bg-zinc-950/90 backdrop-blur-xl supports-[backdrop-filter]:bg-zinc-950/60">
             <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
                 <div className="flex items-center gap-3 group/logo cursor-pointer hover:scale-105 transition-transform">
                     <div className="h-4 w-4 rounded-sm bg-gradient-to-tr from-emerald-500 to-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.4)] group-hover/logo:scale-110 transition-transform" />
