@@ -160,7 +160,7 @@ export default function Dashboard() {
                 key="global-map-v2"
                 events={events}
                 onEventClick={handleEventClick}
-                className="min-h-[750px] w-full shadow-2xl shadow-emerald-900/5 sm:h-[80vh] border border-white/5 rounded-3xl overflow-hidden bg-zinc-900/20"
+                className="h-[400px] min-h-[400px] w-full shadow-2xl shadow-emerald-900/5 lg:h-[80vh] lg:min-h-[750px] border border-white/5 rounded-3xl overflow-hidden bg-zinc-900/20"
               />
             </div>
 
