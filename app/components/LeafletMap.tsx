@@ -132,6 +132,7 @@ export default function LeafletMap({ events, militaryAssets, quakes, onEventClic
             center={[20, 0]}
             zoom={2}
             scrollWheelZoom={false}
+            touchZoom={false}
             style={{ width: '100%', height: '100%', background: '#020617' }}
             ref={setMap}
             zoomControl={false} // Disable default zoom controls
