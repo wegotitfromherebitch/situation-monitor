@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { GlassCard } from "./components/GlassCard";
-import { Activity, Globe, Newspaper, TrendingUp, ShieldAlert, Zap } from "lucide-react";
+import { Activity, Globe, ShieldAlert, Radio, AlertTriangle, Zap } from "lucide-react";
 import { useSignals } from "./lib/useSignals";
 import { GlobalMap } from "./components/GlobalMap";
 import { DetailPane } from "./components/DetailPane";
@@ -11,11 +11,11 @@ import { cn } from "./lib/utils";
 
 // Helper to calculate DEFCON level from severity (0-100)
 const getDefconLevel = (severity: number) => {
-  if (severity >= 90) return { level: 1, color: "text-red-600" };
-  if (severity >= 75) return { level: 2, color: "text-orange-500" };
-  if (severity >= 50) return { level: 3, color: "text-amber-400" };
-  if (severity >= 25) return { level: 4, color: "text-emerald-400" };
-  return { level: 5, color: "text-emerald-600" };
+  if (severity >= 90) return { level: 1, color: "text-red-600", bg: "bg-red-500", border: "border-red-500" };
+  if (severity >= 75) return { level: 2, color: "text-orange-500", bg: "bg-orange-500", border: "border-orange-500" };
+  if (severity >= 50) return { level: 3, color: "text-amber-400", bg: "bg-amber-400", border: "border-amber-400" };
+  if (severity >= 25) return { level: 4, color: "text-emerald-400", bg: "bg-emerald-400", border: "border-emerald-400" };
+  return { level: 5, color: "text-emerald-600", bg: "bg-emerald-600", border: "border-emerald-600" };
 };
 
 export default function Home() {
@@ -26,16 +26,17 @@ export default function Home() {
   const maxSeverity = events.length > 0 ? Math.max(...events.map(e => e.severity)) : 0;
   const threat = getDefconLevel(maxSeverity);
 
-  // Find a market event for the widget, if any
-  const marketEvent = events.find(e => e.category === 'MARKETS');
+  // Stats
+  const criticalThreats = events.filter(e => e.severity >= 75).length;
+  const activeZones = new Set(events.map(e => e.region)).size;
 
-  // Sort events for the feed (Newest/Highest Severity mix)
+  // Sort events for the feed
   const feedEvents = [...events]
     .sort((a, b) => b.severity - a.severity)
-    .slice(0, 4);
+    .slice(0, 15); // Show more events since we have a scroller
 
   return (
-    <main className="min-h-screen p-4 md:p-6 lg:p-8 font-sans selection:bg-emerald-500/30">
+    <main className="min-h-screen p-2 md:p-4 bg-[#020202] text-zinc-100 font-mono selection:bg-emerald-500/30 overflow-hidden flex flex-col">
 
       {/* Detail View Overlay */}
       <DetailPane
@@ -44,38 +45,60 @@ export default function Home() {
         onAction={(action, event) => console.log('Action:', action, event.id)}
       />
 
-      {/* Header */}
-      <header className="mb-8 flex justify-between items-end border-b border-white/5 pb-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white mb-1">
-            SITUATION <span className="text-zinc-500">MONITOR</span>
+      {/* 1. TOP STATUS BAR (Dense, small text) */}
+      <header className="mb-2 shrink-0 flex justify-between items-center border-b border-white/10 pb-2 px-2">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            <div className="w-3 h-3 bg-emerald-500 rounded-sm animate-pulse" />
+            SITUATION<span className="text-zinc-600">MONITOR</span>
           </h1>
-          <p className="text-emerald-500 font-mono text-xs uppercase tracking-widest flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            {isLoading ? "INITIALIZING UPLINK..." : "SYSTEM ONLINE"}
-          </p>
+          <div className="h-4 w-px bg-white/10 hidden sm:block" />
+          <div className="text-[10px] text-zinc-500 tracking-widest uppercase hidden sm:block">
+            SECURE CHANNEL: <span className="text-emerald-500">ENCRYPTED</span>
+          </div>
         </div>
-        <div className="text-right hidden md:block">
-          <div className="text-zinc-500 font-mono text-xs">V.2.0.1 // SECURE</div>
+        <div className="flex gap-4 text-[10px] text-zinc-500 font-mono">
+          <span className="hidden md:inline">LAT: 34.0522 N</span>
+          <span className="hidden md:inline">LON: 118.2437 W</span>
+          <span className="text-emerald-500">{isLoading ? "SYS: UPLINKING..." : "SYS: NORMAL"}</span>
         </div>
       </header>
 
-      {/* The Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:auto-rows-[180px]">
+      {/* 2. THE STAT ROW (Restoring the density from Screenshot 1) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2 shrink-0">
+        {[
+          { label: "TOTAL SIGNALS", val: events.length.toString(), icon: Radio, color: "text-white" },
+          { label: "CRITICAL THREATS", val: criticalThreats.toString(), icon: AlertTriangle, color: "text-rose-500" },
+          { label: "ACTIVE ZONES", val: activeZones.toString(), icon: Globe, color: "text-amber-500" },
+          { label: "SYSTEM LATENCY", val: "24ms", icon: Zap, color: "text-emerald-400" },
+        ].map((stat, i) => (
+          <GlassCard key={i} variant="hud" className="h-16 md:h-20 flex items-center px-4" delay={0.1 + (i * 0.05)}>
+            <div className="flex justify-between items-center w-full">
+              <div>
+                <div className="text-[9px] md:text-[10px] text-zinc-500 uppercase tracking-widest mb-0.5 md:mb-1">{stat.label}</div>
+                <div className={`text-xl md:text-2xl font-bold leading-none ${stat.color}`}>{stat.val}</div>
+              </div>
+              <stat.icon className={`w-4 h-4 ${stat.color} opacity-50`} />
+            </div>
+          </GlassCard>
+        ))}
+      </div>
 
-        {/* 1. Main Map / Situation Area (Large) */}
-        <GlassCard className="md:col-span-3 md:row-span-3 min-h-[500px] p-0 overflow-hidden relative group" delay={0.1}>
+      {/* 3. MAIN GRID (Asymmetrical & Dense) */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-2 flex-1 min-h-0">
+
+        {/* LEFT: MAIN MAP (Spans 9 cols) */}
+        <GlassCard variant="hud" className="col-span-1 md:col-span-9 relative group p-0 min-h-[300px] md:min-h-0" delay={0.2}>
+          {/* Map Header Overlay */}
           <div className="absolute top-4 left-4 z-20 pointer-events-none">
-            <h2 className="text-zinc-400 font-mono text-xs tracking-widest flex items-center gap-2 bg-black/50 backdrop-blur px-2 py-1 rounded border border-white/10">
-              <Globe className="w-4 h-4" /> GLOBAL THEATER
-            </h2>
+            <div className="text-xs text-emerald-500 border border-emerald-500/30 px-2 py-1 bg-black/50 backdrop-blur-sm inline-block mb-1 font-mono tracking-wider">
+              LIVE SATELLITE FEED
+            </div>
+            <div className="text-[10px] text-zinc-400 font-mono">SECTOR 4 // NORTH ATLANTIC</div>
           </div>
 
-          {/* Map Component - Full Fill */}
-          <div className="w-full h-full relative">
+          {/* The Actual Map */}
+          <div className="absolute inset-0 bg-zinc-950">
             <GlobalMap
               events={events}
               onEventClick={setSelectedEvent}
@@ -84,98 +107,55 @@ export default function Home() {
           </div>
         </GlassCard>
 
-        {/* 2. Quick Stat (Threat Level) */}
-        <GlassCard delay={0.2} className="flex flex-col justify-center relative overflow-hidden">
-          <h2 className="text-zinc-500 font-mono text-xs mb-1 uppercase flex items-center gap-2">
-            <ShieldAlert className="w-3 h-3" /> Threat Level
-          </h2>
-          <div className="text-4xl font-bold text-white font-mono tracking-tighter flex items-baseline gap-1">
-            DEF<span className={cn("transition-colors duration-500", threat.color)}>{threat.level}</span>
-          </div>
+        {/* RIGHT: INTEL COLUMN (Spans 3 cols) */}
+        <div className="col-span-1 md:col-span-3 flex flex-col gap-2 min-h-[300px] md:min-h-0">
 
-          {/* Decorative background pulse based on threat */}
-          <div className={cn("absolute -right-4 -bottom-4 w-24 h-24 rounded-full blur-3xl opacity-20 pointer-events-none", threat.color.replace('text-', 'bg-'))} />
-        </GlassCard>
-
-        {/* 3. Markets (Small) */}
-        <GlassCard delay={0.3} className="flex flex-col justify-center">
-          <h2 className="text-zinc-500 font-mono text-xs mb-1 uppercase flex gap-2">
-            <TrendingUp className="w-3 h-3" /> Markets
-          </h2>
-          {marketEvent ? (
-            <>
-              <div className="text-lg font-mono text-white leading-tight mt-1 line-clamp-1">
-                {marketEvent.titleOverride || "MARKET ACTIVITY"}
-              </div>
-              <div className={cn("text-2xl font-mono mt-1", marketEvent.severity > 50 ? "text-red-400" : "text-emerald-400")}>
-                {marketEvent.severity > 50 ? "-" : "+"}{(marketEvent.severity / 20).toFixed(1)}%
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="text-2xl font-mono text-white">
-                SPX <span className="text-emerald-400 text-lg">+0.0%</span>
-              </div>
-              <div className="text-xs text-zinc-600 font-mono mt-1">NO DATA STREAM</div>
-            </>
-          )}
-        </GlassCard>
-
-        {/* 4. News Feed (Tall) */}
-        <GlassCard className="md:col-span-1 md:row-span-2 overflow-y-auto custom-scrollbar" delay={0.4}>
-          <h2 className="text-zinc-400 font-mono text-xs tracking-widest mb-4 flex items-center gap-2 sticky top-0 bg-zinc-900/90 backdrop-blur py-2 z-10 -mx-2 px-2 border-b border-white/5">
-            <Newspaper className="w-4 h-4" /> INTEL FEED
-          </h2>
-          <div className="space-y-4 pb-2">
-            {feedEvents.length > 0 ? (
-              feedEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="group cursor-pointer hover:bg-white/5 p-2 -mx-2 rounded transition-colors"
-                  onClick={() => setSelectedEvent(event)}
-                >
-                  <div className="flex justify-between items-center mb-1">
-                    <span className={cn(
-                      "text-[9px] font-mono px-1.5 py-0.5 rounded border",
-                      event.category === 'SECURITY' ? "text-red-400 border-red-500/20 bg-red-500/10" :
-                        event.category === 'CYBER' ? "text-cyan-400 border-cyan-500/20 bg-cyan-500/10" :
-                          "text-zinc-400 border-zinc-500/20 bg-zinc-500/10"
-                    )}>
-                      {event.category}
-                    </span>
-                    <span className="text-[9px] text-zinc-600 font-mono">
-                      {event.region}
-                    </span>
-                  </div>
-                  <div className="text-xs text-zinc-300 group-hover:text-white transition-colors leading-snug">
-                    {displayTitleFor(event)}
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="text-xs text-zinc-600 font-mono text-center py-8">
-                ACQUIRING SIGNAL...
-              </div>
-            )}
-          </div>
-        </GlassCard>
-
-        {/* 5. System Log (Wide Bottom) */}
-        <GlassCard className="md:col-span-4 min-h-[60px] flex items-center" delay={0.5}>
-          <div className="flex items-center gap-4 text-xs font-mono text-zinc-500 w-full">
-            <Activity className="w-4 h-4 text-zinc-700" />
-            <span className="animate-pulse">{isLoading ? "ESTABLISHING CONNECTION..." : "DATALINK ACTIVE"}</span>
-            <span className="hidden md:inline text-zinc-700">|</span>
-            <span className="hidden md:inline">
-              LAST PACKET: {lastUpdated ? lastUpdated.toLocaleTimeString() : "--:--:--"}
-            </span>
-            <div className="ml-auto flex items-center gap-2">
-              <Zap className="w-3 h-3 text-amber-500" />
-              <span>{events.length} SIGNALS TRACKED</span>
+          {/* THREAT LEVEL */}
+          <GlassCard variant="hud" className="h-24 md:h-32 flex flex-col justify-center items-center text-center shrink-0" delay={0.3}>
+            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-mono">Current Defcon</div>
+            <div className="text-4xl md:text-5xl font-bold text-white tracking-tighter relative inline-block">
+              {threat.level}
+              <span className={cn("absolute -top-2 -right-6 text-[10px] md:text-xs font-normal text-black px-1 rounded-sm font-mono", threat.bg)}>
+                {threat.level === 1 ? 'CRIT' : threat.level <= 3 ? 'HIGH' : 'LOW'}
+              </span>
             </div>
-          </div>
-        </GlassCard>
+          </GlassCard>
 
+          {/* INTEL FEED (High Density List) */}
+          <GlassCard variant="hud" className="flex-1 overflow-hidden flex flex-col min-h-0" delay={0.4}>
+            <div className="flex items-center gap-2 mb-3 border-b border-white/5 pb-2 shrink-0">
+              <Activity className="w-3 h-3 text-emerald-500" />
+              <span className="text-[10px] font-bold text-white tracking-widest uppercase font-mono">Signal Feed</span>
+            </div>
+
+            <div className="space-y-0 overflow-y-auto pr-1 custom-scrollbar flex-1">
+              {isLoading && events.length === 0 ? (
+                <div className="text-[10px] text-zinc-500 font-mono p-2">Initializing encryption layers...</div>
+              ) : (
+                feedEvents.map((item, i) => (
+                  <div
+                    key={item.id}
+                    className="group relative pl-3 border-l border-zinc-800 hover:border-emerald-500 transition-colors py-2 cursor-pointer hover:bg-white/5"
+                    onClick={() => setSelectedEvent(item)}
+                  >
+                    <div className="flex justify-between items-start pr-2">
+                      <div className="text-[9px] text-zinc-500 mb-0.5 font-mono truncate max-w-[70%]">
+                        09:4{i} // {item.category}
+                      </div>
+                      {item.severity > 75 && (
+                        <span className="text-[8px] text-red-500 font-mono border border-red-500/30 px-1 rounded">ALERT</span>
+                      )}
+                    </div>
+                    <div className="text-[10px] md:text-[11px] leading-snug text-zinc-300 group-hover:text-white transition-colors font-mono">
+                      {displayTitleFor(item)}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </GlassCard>
+
+        </div>
       </div>
     </main>
   );
