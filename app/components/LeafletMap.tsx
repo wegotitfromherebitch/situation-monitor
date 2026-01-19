@@ -79,25 +79,21 @@ function MapControls() {
 // --- Custom Icons via L.divIcon ---
 
 const createEventIcon = (color: string, isSecurity: boolean) => {
-    const size = isSecurity ? 18 : 12;
-    const ringSize = isSecurity ? 48 : 32; // Larger radar signature
+    const size = isSecurity ? 14 : 10; // Slightly smaller core
+    const ringSize = isSecurity ? 32 : 24; // Tighter, cleaner radar ring
 
-    // Larger invisible hit container
-    const containerSize = 60;
+    // Container matches ring size to prevent offset issues
+    const containerSize = 40;
 
     const html = `
         <div class="relative flex items-center justify-center w-full h-full">
-            <!-- Slow Radar Ripple 1 -->
-            <div class="absolute rounded-full opacity-20 animate-[ping_3s_linear_infinite]" 
-                 style="width: ${ringSize}px; height: ${ringSize}px; background-color: ${color}; animation-duration: 3s;"></div>
+            <!-- Single smooth radar ripple -->
+            <div class="absolute rounded-full opacity-25 animate-ping" 
+                 style="width: ${ringSize}px; height: ${ringSize}px; background-color: ${color}; animation-duration: 3s; animation-timing-function: ease-out;"></div>
             
-             <!-- Slow Radar Ripple 2 (Delayed) -->
-            <div class="absolute rounded-full opacity-20 animate-[ping_3s_linear_infinite]" 
-                 style="width: ${ringSize}px; height: ${ringSize}px; background-color: ${color}; animation-duration: 3s; animation-delay: 1.5s"></div>
-            
-            <!-- Core Dot -->
-            <div class="relative rounded-full border border-black/50 shadow-sm" 
-                 style="width: ${size}px; height: ${size}px; background-color: ${color}; box-shadow: 0 0 15px ${color};"></div>
+            <!-- Solid Core Dot -->
+            <div class="relative rounded-full border border-black/60 shadow-sm" 
+                 style="width: ${size}px; height: ${size}px; background-color: ${color}; box-shadow: 0 0 10px ${color}60;"></div>
         </div>
     `;
 
