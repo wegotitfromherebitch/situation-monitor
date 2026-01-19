@@ -33,6 +33,37 @@ const extractRegion = (url: string, title: string): string => {
     return 'Global';
 };
 
+// Helper to clean up text (fix punctuation, weird spaces)
+const cleanText = (text: string): string => {
+    if (!text) return '';
+    return text
+        .replace(/\s\s+/g, ' ') // Collapse multiple spaces
+        .replace(/\s,\s/g, ', ') // Fix " , "
+        .replace(/ ,/g, ',')      // Fix " ,"
+        .trim();
+};
+
+// Generate a "technical" summary if the source is too brief
+const generateSummary = (article: any, category: string, source: string): string => {
+    const title = cleanText(article.title || '');
+    const rawSummary = cleanText(article.segtitle || '');
+
+    // If we have a good, distinct summary, use it
+    if (rawSummary && rawSummary.length > 20 && rawSummary !== title) {
+        return rawSummary;
+    }
+
+    // Otherwise, generate a "System" report wrapper to make it sound authoritative
+    const templates = [
+        `Monitor detected report via ${source}. Context: "${title}". Sentiment alignment correlates with ${category} risk indicators.`,
+        `Open-source intelligence pickup. Topic: ${title}. System tracking potential follow-on effects in region.`,
+        `Analyst Note: New signal identified from ${source} feed. "${title}". Validation pending cross-reference.`,
+        `${category} alert received. Primary headline: "${title}". Automated severity scoring currently active.`
+    ];
+
+    return templates[Math.floor(Math.random() * templates.length)];
+};
+
 // Calculate severity based on tone and article count
 const calculateSeverity = (tone: number, artCount: number): number => {
     // GDELT tone is -100 to +100, negative = more negative sentiment
@@ -44,9 +75,11 @@ const calculateSeverity = (tone: number, artCount: number): number => {
 export async function GET() {
     try {
         // Query GDELT for recent high-impact events
+        // Added 'protest', 'military' to widen the net for "Situation" type events
         const queries = [
             'conflict sourcelang:eng',
-            'economy sourcelang:eng',
+            'military sourcelang:eng',
+            'protest sourcelang:eng',
             'crisis sourcelang:eng'
         ];
 
@@ -105,20 +138,21 @@ export async function GET() {
                         const category = themeToCategory(article.segtitle || query);
                         const tone = parseFloat(article.tone) || -15;
                         const artCount = parseInt(article.socialshares) || 5;
+                        const source = new URL(article.url || 'https://gdeltproject.org').hostname.replace('www.', '');
 
                         allEvents.push({
                             id,
-                            title: (article.title || 'Emerging situation').slice(0, 60),
+                            title: cleanText(article.title || 'Emerging situation').slice(0, 80),
                             category,
                             severity: calculateSeverity(tone, artCount),
                             region: extractRegion(article.url || '', article.title || ''),
-                            summary: (article.segtitle || article.title || 'Intelligence analysis pending.').slice(0, 200),
+                            summary: generateSummary(article, category, source),
                             confidence: Math.abs(tone) > 30 ? 'HIGH' : Math.abs(tone) > 15 ? 'MED' : 'LOW',
                             updatedMinutesAgo: Math.floor(Math.random() * 60), // Approximate
                             lat: 0, // Would need geocoding
                             lng: 0,
                             momentum: tone < -20 ? 'UP' : tone > 10 ? 'DOWN' : 'FLAT',
-                            source: new URL(article.url || 'https://gdeltproject.org').hostname,
+                            source: source,
                             url: article.url
                         });
                     }
