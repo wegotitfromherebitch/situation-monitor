@@ -44,16 +44,9 @@ export default function Dashboard() {
     setLoading(false);
   }, []);
 
-  // Simulation effect - use functional updates to avoid stale closure
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTicks((t) => {
-        setEvents((prev) => simulateSync(prev, t + 1));
-        return t + 1;
-      });
-    }, 8500); // 8.5s heartbeat
-    return () => clearInterval(interval);
-  }, []); // Empty deps - interval runs once
+  // Removed background simulation to keep data "stable" and "less noisy" per user request.
+  // Real data updates will come via re-fetching from useSignals hook.
+
 
   const addToast = useCallback((t: Omit<ToastItem, 'id'>) => {
     const id = Math.random().toString(36).slice(2);
