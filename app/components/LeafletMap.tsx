@@ -88,12 +88,12 @@ const createEventIcon = (color: string, isSecurity: boolean) => {
     const html = `
         <div class="relative flex items-center justify-center w-full h-full">
             <!-- Slow Radar Ripple 1 -->
-            <div class="absolute rounded-full opacity-20 animate-[ping_3s_linear_infinite]" 
-                 style="width: ${ringSize}px; height: ${ringSize}px; background-color: ${color}; animation-duration: 3s;"></div>
+            <div class="absolute rounded-full opacity-20 animate-[ping_6s_linear_infinite]" 
+                 style="width: ${ringSize}px; height: ${ringSize}px; background-color: ${color}; animation-duration: 6s;"></div>
             
              <!-- Slow Radar Ripple 2 (Delayed) -->
-            <div class="absolute rounded-full opacity-20 animate-[ping_3s_linear_infinite]" 
-                 style="width: ${ringSize}px; height: ${ringSize}px; background-color: ${color}; animation-duration: 3s; animation-delay: 1.5s"></div>
+            <div class="absolute rounded-full opacity-20 animate-[ping_6s_linear_infinite]" 
+                 style="width: ${ringSize}px; height: ${ringSize}px; background-color: ${color}; animation-duration: 6s; animation-delay: 3s"></div>
             
             <!-- Core Dot -->
             <div class="relative rounded-full border border-black/50 shadow-sm" 
