@@ -18,6 +18,8 @@ export function EventCard({ event, onClick }: { event: EventItem; onClick: () =>
     const severityColor = isCritical ? 'text-red-500' :
         event.severity > 50 ? 'text-amber-500' : 'text-zinc-600';
 
+    const eventTime = new Date(Date.now() - event.updatedMinutesAgo * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
     return (
         <div
             onClick={onClick}
@@ -32,7 +34,8 @@ export function EventCard({ event, onClick }: { event: EventItem; onClick: () =>
                             {config.label}
                         </span>
                         <span className="text-zinc-800">•</span>
-                        <span className="text-zinc-500 font-mono text-[10px]">{event.updatedMinutesAgo}m ago</span>
+                        <span className="text-zinc-400 font-mono text-[10px] font-bold">{eventTime}</span>
+                        <span className="text-zinc-600 font-mono text-[9px]">{event.updatedMinutesAgo}m ago</span>
                     </div>
 
                     <div className={`font-mono text-[10px] font-bold ${severityColor}`}>

@@ -217,6 +217,7 @@ export default function LeafletMap({ events, militaryAssets, quakes, onEventClic
                 if (!event.coordinates) return null;
                 const isSecurity = event.category === 'SECURITY';
                 const color = event.severity > 70 ? '#ef4444' : event.severity > 40 ? '#f59e0b' : '#10b981';
+                const eventTime = new Date(Date.now() - event.updatedMinutesAgo * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 return (
                     <Marker
@@ -232,9 +233,12 @@ export default function LeafletMap({ events, militaryAssets, quakes, onEventClic
                             closeButton={false}
                             offset={[0, -10]}
                         >
-                            <div className="bg-zinc-950 border border-zinc-700 p-2 rounded text-zinc-200 font-mono text-xs">
-                                <div className="font-bold text-emerald-400">{event.baseTitle}</div>
-                                <div className="text-[10px] text-zinc-400">{event.summary || 'No details available'}</div>
+                            <div className="bg-zinc-950 border border-zinc-700 p-2 rounded text-zinc-200 font-mono text-xs min-w-[160px]">
+                                <div className="flex justify-between items-start gap-2 mb-1">
+                                    <div className={`font-bold ${event.severity > 70 ? 'text-red-400' : 'text-emerald-400'}`}>{event.baseTitle}</div>
+                                    <div className="text-[9px] text-zinc-500 font-bold whitespace-nowrap bg-zinc-900 px-1 rounded">{eventTime}</div>
+                                </div>
+                                <div className="text-[10px] text-zinc-400 leading-tight border-t border-zinc-800 pt-1 mt-1">{event.summary || 'No details available'}</div>
                             </div>
                         </Popup>
                     </Marker>
@@ -290,33 +294,7 @@ export default function LeafletMap({ events, militaryAssets, quakes, onEventClic
                         closeButton={false}
                         offset={[0, -12]}
                     >
-                        <div className="bg-zinc-950/90 backdrop-blur-md border border-cyan-500/30 p-0 rounded shadow-2xl text-zinc-200 font-mono text-xs min-w-[180px] overflow-hidden">
-                            {/* Header with Type Prominent */}
-                            <div className="bg-cyan-900/40 p-2 border-b border-cyan-500/30 flex flex-col">
-                                <span className="text-[10px] text-cyan-300 font-bold tracking-widest uppercase opacity-70">
-                                    {asset.type} // {asset.subtype}
-                                </span>
-                                <span className="text-lg font-bold text-white tracking-wide">
-                                    {asset.callsign}
-                                </span>
-                            </div>
-
-                            <div className="p-3">
-                                <div className="grid grid-cols-2 gap-3 text-[10px] text-zinc-400">
-                                    <div>
-                                        <span className="text-cyan-500/70 block text-[9px] font-bold mb-0.5">SPEED</span>
-                                        <span className="text-zinc-100 font-medium">{Math.round(asset.speed || 0)} KTS</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-cyan-500/70 block text-[9px] font-bold mb-0.5">ALTITUDE</span>
-                                        <span className="text-zinc-100 font-medium">{asset.altitude ? Math.round(asset.altitude).toLocaleString() + ' FT' : 'SURFACE'}</span>
-                                    </div>
-                                </div>
-                                <div className="mt-3 text-[9px] text-zinc-500 uppercase tracking-tight border-t border-white/5 pt-2">
-                                    {asset.description}
-                                </div>
-                            </div>
-                        </div>
+                        <AssetPopupContent asset={asset} />
                     </Popup>
                 </Marker>
             ))}
@@ -324,3 +302,129 @@ export default function LeafletMap({ events, militaryAssets, quakes, onEventClic
         </MapContainer>
     );
 }
+
+// Extracted Popup Content Component to handle logic cleanly
+function AssetPopupContent({ asset }: { asset: MilitaryAsset }) {
+    // Helper to resolve image and model
+    const details = (() => {
+        const desc = (asset.description || '').toUpperCase();
+        const call = (asset.callsign || '').toUpperCase();
+
+        // 1. CARRIERS
+        if (asset.subtype === 'CARRIER') return {
+            model: 'NIMITZ CLASS CARRIER',
+            img: 'https://commons.wikimedia.org/wiki/Special:FilePath/USS_Nimitz_(CVN-68).jpg?width=400'
+        };
+
+        // 2. DESTROYERS
+        if (asset.subtype === 'DESTROYER') return {
+            model: 'ARLEIGH BURKE CLASS',
+            img: 'https://commons.wikimedia.org/wiki/Special:FilePath/USS_Arleigh_Burke_(DDG_51)_steams_through_the_Mediterranean_Sea.jpg?width=400'
+        };
+
+        // 3. AIRCRAFT (Simulated or Live Key Words)
+        if (desc.includes('GLOBEMASTER') || desc.includes('C-17')) return {
+            model: 'C-17 GLOBEMASTER III',
+            img: 'https://commons.wikimedia.org/wiki/Special:FilePath/C-17A_GLOBEMASTER_III.jpg?width=400'
+        };
+        if (desc.includes('STRATOTANKER') || desc.includes('KC-135')) return {
+            model: 'KC-135R STRATOTANKER',
+            img: 'https://commons.wikimedia.org/wiki/Special:FilePath/KC135-CFM56.jpg?width=400'
+        };
+        if (desc.includes('POSEIDON') || desc.includes('P-8')) return {
+            model: 'P-8A POSEIDON',
+            img: 'https://commons.wikimedia.org/wiki/Special:FilePath/P-8_Poseidon_at_CBR.JPG?width=400'
+        };
+        if (desc.includes('GLOBAL HAWK') || desc.includes('RQ-4') || desc.includes('FORTE')) return {
+            model: 'RQ-4 GLOBAL HAWK',
+            img: 'https://commons.wikimedia.org/wiki/Special:FilePath/RQ-4_Global_Hawk.jpg?width=400'
+        };
+        if (desc.includes('HERCULES') || desc.includes('C-130')) return {
+            model: 'C-130 HERCULES',
+            img: 'https://commons.wikimedia.org/wiki/Special:FilePath/Lockheed_C-130_Hercules.jpg?width=400' // Guessing filename, fallback handled
+        };
+        if (desc.includes('LIGHTNING') || desc.includes('F-35')) return {
+            model: 'F-35 LIGHTNING II',
+            img: 'https://commons.wikimedia.org/wiki/Special:FilePath/F-35_Lightning_II.jpg?width=400'
+        };
+
+        // 4. GENERIC FALLBACKS BASED ON SUBTYPE
+        if (asset.subtype === 'FIGHTER') return {
+            model: 'AIR SUPERIORITY FIGHTER',
+            img: 'https://commons.wikimedia.org/wiki/Special:FilePath/F-22_Raptor_edit1_(cropped).jpg?width=400'
+        };
+        if (asset.subtype === 'TANKER') return {
+            model: 'AERIAL REFUELING',
+            img: 'https://commons.wikimedia.org/wiki/Special:FilePath/KC-10_Extender_Refueling.jpg?width=400'
+        };
+        if (asset.subtype === 'LOGISTICS') return {
+            model: 'STRATEGIC AIRLIFT',
+            img: 'https://commons.wikimedia.org/wiki/Special:FilePath/C-5_Galaxy_taking_off_from_Travis_AFB.jpg?width=400'
+        };
+
+        // Default
+        return {
+            model: asset.subtype || 'UNKNOWN ASSET',
+            img: null
+        };
+    })();
+
+    // Image Error Fallback (in case Wiki filename is wrong)
+    const [imgError, setImgError] = useState(false);
+
+    return (
+        <div className="bg-zinc-950/90 backdrop-blur-md border border-cyan-500/30 p-0 rounded shadow-2xl text-zinc-200 font-mono text-xs w-[240px] overflow-hidden flex flex-col">
+
+            {/* Image Section */}
+            {details.img && !imgError && (
+                <div className="w-full h-32 relative bg-zinc-900 border-b border-cyan-500/20">
+                    <img
+                        src={details.img}
+                        alt={details.model}
+                        className="w-full h-full object-cover"
+                        onError={() => setImgError(true)}
+                    />
+                    <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-zinc-950 to-transparent opacity-80" />
+                </div>
+            )}
+
+            {/* Header Content */}
+            <div className={`p-3 border-b border-cyan-500/30 flex flex-col ${!details.img || imgError ? 'bg-cyan-900/20' : 'relative -mt-8 z-10'}`}>
+                <span className="text-[9px] text-cyan-400 font-bold tracking-widest uppercase opacity-90 drop-shadow-md">
+                    {asset.country} // {details.model}
+                </span>
+                <span className="text-xl font-bold text-white tracking-wide drop-shadow-md">
+                    {asset.callsign}
+                </span>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="p-3 bg-zinc-950/50">
+                <div className="grid grid-cols-2 gap-4 text-[10px] text-zinc-400">
+                    <div>
+                        <span className="text-cyan-500/70 block text-[9px] font-bold mb-0.5 tracking-wider">SPEED</span>
+                        <span className="text-zinc-100 font-medium text-xs">{Math.round(asset.speed || 0)} KTS</span>
+                    </div>
+                    <div>
+                        <span className="text-cyan-500/70 block text-[9px] font-bold mb-0.5 tracking-wider">ALTITUDE</span>
+                        <span className="text-zinc-100 font-medium text-xs">{asset.altitude ? Math.round(asset.altitude).toLocaleString() + ' FT' : 'SURFACE'}</span>
+                    </div>
+                </div>
+
+                {/* Description Footer */}
+                <div className="mt-3 pt-2 border-t border-white/5 text-[9px] text-zinc-500 uppercase tracking-tight leading-relaxed">
+                    {asset.description}
+                </div>
+
+                {/* Status Indicator */}
+                <div className="mt-2 flex items-center justify-between">
+                    <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold ${asset.isReal ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-zinc-800 text-zinc-500 border border-zinc-700'}`}>
+                        {asset.isReal ? 'LIVE FEED' : 'SIMULATION'}
+                    </span>
+                    <span className="text-[8px] text-zinc-600 font-bold">{asset.status} • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+

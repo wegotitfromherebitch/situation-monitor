@@ -86,6 +86,10 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
                                         {event.category}
                                     </span>
                                     <span className="text-xs text-zinc-500 font-mono tracking-wider">ID:G-{event.id.toUpperCase().slice(0, 8)}</span>
+                                    <span className="text-zinc-700 mx-2">•</span>
+                                    <span className="text-xs text-zinc-400 font-mono font-bold tracking-wider">
+                                        T-{new Date(Date.now() - event.updatedMinutesAgo * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
                                 </div>
                                 <h2 className="text-xl font-bold text-zinc-100 leading-tight font-mono">{title}</h2>
                             </div>
@@ -107,7 +111,7 @@ export function DetailPane({ event, onClose, onAction }: DetailPaneProps) {
                                     <div className="text-[10px] font-bold text-zinc-500 mb-1 flex items-center gap-1 uppercase tracking-wider font-mono">
                                         <Activity className="w-3 h-3" /> Severity
                                     </div>
-                                    <div className="text-3xl font-mono text-zinc-100 tracking-tighter">{event.severity}<span className="text-sm text-zinc-600 ml-1">/100</span></div>
+                                    <div className="text-3xl font-mono text-zinc-100 tracking-tighter tabular-nums">{event.severity}<span className="text-sm text-zinc-600 ml-1">/100</span></div>
                                 </div>
                                 <div className="hud-card hud-brackets p-4 relative">
                                     <div className="text-[10px] font-bold text-zinc-500 mb-1 flex items-center gap-1 uppercase tracking-wider font-mono">

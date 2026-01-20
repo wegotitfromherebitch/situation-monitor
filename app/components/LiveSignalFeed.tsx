@@ -218,6 +218,8 @@ export function LiveSignalFeed({
                                                             <div className="mt-1 flex items-center gap-2 text-[10px] text-zinc-600 font-bold uppercase tracking-wider">
                                                                 <span>{s.event.region}</span>
                                                                 <span className="text-zinc-800">•</span>
+                                                                <span>{new Date(s.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                <span className="text-zinc-800">•</span>
                                                                 <span className={c.color}>{relTime(s.ts)} ago</span>
                                                             </div>
                                                         </div>

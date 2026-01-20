@@ -47,9 +47,9 @@ export function MapView({ events, onEventClick, className, focused }: MapViewPro
     }, [events, selectedAssetId]);
 
 
-    // Initialize military assets
+    // Initialize military assets (Simulated / Intel Estimate)
     useEffect(() => {
-        setMilitaryAssets(generateMilitaryAssets(12));
+        setMilitaryAssets(generateMilitaryAssets(35)); // Load full set (Carriers + Air Bridges)
     }, []);
 
     // Military asset movement loop
@@ -82,22 +82,32 @@ export function MapView({ events, onEventClick, className, focused }: MapViewPro
 
                 if (data.success && data.flights.length > 0) {
                     setMilitaryAssets(prev => {
-                        const naval = prev.filter(a => a.type === 'NAVAL');
+                        // PRESERVE SIMULATION: Keep all assets that are simulated (isReal === false)
+                        // This ensures Air Bridges and Carriers don't disappear when live data loads
+                        const simulated = prev.filter(a => a.isReal === false);
 
-                        const liveAir = data.flights.map((f: any) => ({
-                            id: `adsb-${f.id}`,
-                            callsign: f.callsign || 'UAV-X',
-                            type: 'AIRCRAFT',
-                            subtype: 'RECON',
-                            country: f.country === 'United States' ? 'USA' : 'NATO',
-                            coordinates: [f.coordinates[0], f.coordinates[1]] as [number, number],
-                            heading: f.heading,
-                            speed: f.speed,
-                            altitude: f.altitude,
-                            status: 'PATROL',
-                            description: `LIVE FEED: ${f.country} // ${f.callsign}`
-                        }));
-                        return [...naval, ...liveAir.slice(0, 15)];
+                        // STRICT FILTER: ONLY US MILITARY from Live Feed
+                        // We map real ADS-B data to our MilitaryAsset format
+                        const liveAir = data.flights
+                            .filter((f: any) => f.country === 'United States')
+                            .map((f: any) => ({
+                                id: `adsb-${f.id}`,
+                                callsign: f.callsign || 'UAV-X',
+                                type: 'AIRCRAFT',
+                                subtype: 'RECON',
+                                country: 'USA',
+                                coordinates: [f.coordinates[0], f.coordinates[1]] as [number, number],
+                                heading: f.heading,
+                                speed: f.speed,
+                                altitude: f.altitude,
+                                status: 'PATROL',
+                                description: `LIVE FEED: USAF // ${f.callsign}`,
+                                isReal: true // Explicitly mark as Live
+                            }));
+
+                        // Merge Simulation + Live
+                        // Limit live to top 50 to prevent clutter
+                        return [...simulated, ...liveAir.slice(0, 50)];
                     });
                 }
             } catch (e) {
@@ -129,7 +139,7 @@ export function MapView({ events, onEventClick, className, focused }: MapViewPro
                     <span className={isAssetListExpanded ? "rotate-180 transition-transform" : "transition-transform"}>
                         {isAssetListExpanded ? '▼' : '▲'}
                     </span>
-                    <span>{militaryAssets.length} ASSETS TRACKING</span>
+                    <span>{militaryAssets.length} US ASSETS TRACKING</span>
                 </button>
 
                 {/* The List (Expands Upwards) */}
@@ -151,7 +161,10 @@ export function MapView({ events, onEventClick, className, focused }: MapViewPro
                         >
                             {asset.type === 'AIRCRAFT' ? <Plane className="w-3 h-3 text-cyan-400" /> : <Ship className="w-3 h-3 text-blue-500" />}
                             <div className="flex flex-col min-w-0">
-                                <span className="text-[9px] font-bold font-mono tracking-wider truncate">{asset.callsign}</span>
+                                <span className={`text-[9px] font-bold font-mono tracking-wider truncate flex gap-1 ${!asset.isReal ? 'text-zinc-500' : 'text-cyan-300'}`}>
+                                    {asset.callsign}
+                                    {!asset.isReal && <span className="text-[7px] bg-zinc-800 px-1 rounded text-zinc-500">SIM</span>}
+                                </span>
                                 <span className="text-[8px] opacity-70 font-mono truncate">{asset.status} // {asset.coordinates[0].toFixed(2)}, {asset.coordinates[1].toFixed(2)}</span>
                             </div>
                         </div>

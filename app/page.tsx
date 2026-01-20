@@ -6,6 +6,7 @@ import { Activity, Globe, ShieldAlert, Radio, AlertTriangle, Zap } from "lucide-
 import { useSignals } from "./lib/useSignals";
 import { GlobalMap } from "./components/GlobalMap";
 import { DetailPane } from "./components/DetailPane";
+import { IntelModal } from "./components/IntelModal";
 import { EventItem, displayTitleFor } from "./lib/events";
 import { cn } from "./lib/utils";
 
@@ -21,6 +22,7 @@ const getDefconLevel = (severity: number) => {
 export default function Home() {
   const { events, isLoading, lastUpdated, refresh } = useSignals({ interval: 10000 });
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+  const [showIntel, setShowIntel] = useState(false);
   const [filter, setFilter] = useState<'ALL' | 'CRITICAL'>('ALL');
 
   // Filter Logic
@@ -64,8 +66,8 @@ export default function Home() {
           </div>
         </div>
         <div className="flex gap-4 text-[10px] text-zinc-500 font-mono">
-          <span className="hidden md:inline">LAT: 34.0522 N</span>
-          <span className="hidden md:inline">LON: 118.2437 W</span>
+          <span className="hidden md:inline tabular-nums tracking-tighter">LAT: 34.0522 N</span>
+          <span className="hidden md:inline tabular-nums tracking-tighter">LON: 118.2437 W</span>
           <span className="text-emerald-500">{isLoading ? "SYS: UPLINKING..." : "SYS: NORMAL"}</span>
         </div>
       </header>
@@ -128,7 +130,9 @@ export default function Home() {
                 )}>
                   {stat.label}
                 </div>
-                <div className={`text-xl md:text-2xl font-bold leading-none ${stat.color} group-hover:text-white transition-colors`}>{stat.val}</div>
+                <div className={`text-xl md:text-2xl font-bold leading-none ${stat.color} group-hover:text-white transition-colors`}>
+                  <span className="font-mono tabular-nums tracking-tighter">{stat.val}</span>
+                </div>
               </div>
               <stat.icon className={`w-4 h-4 ${stat.color} opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all`} />
             </div>
@@ -163,11 +167,17 @@ export default function Home() {
         <div className="col-span-1 md:col-span-3 flex flex-col gap-2 min-h-[300px] md:min-h-0">
 
           {/* THREAT LEVEL */}
-          <GlassCard variant="hud" className="h-24 md:h-32 flex flex-col justify-center items-center text-center shrink-0" delay={0.3}>
-            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-mono">Current Defcon</div>
-            <div className="text-4xl md:text-5xl font-bold text-white tracking-tighter relative inline-block">
+          {/* THREAT LEVEL */}
+          <GlassCard
+            variant="hud"
+            className="h-24 md:h-32 flex flex-col justify-center items-center text-center shrink-0 cursor-pointer hover:bg-white/5 active:scale-95 transition-all group"
+            delay={0.3}
+            onClick={() => setShowIntel(true)}
+          >
+            <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2 font-mono group-hover:text-emerald-500 transition-colors">Current Defcon</div>
+            <div className="text-4xl md:text-5xl font-bold text-white tracking-tighter relative inline-block group-hover:scale-110 transition-transform">
               {threat.level}
-              <span className={cn("absolute -top-2 -right-6 text-[10px] md:text-xs font-normal text-black px-1 rounded-sm font-mono", threat.bg)}>
+              <span className={cn("absolute -top-2 -right-6 text-[10px] md:text-xs font-normal text-black px-1 rounded-sm font-mono transition-colors", threat.bg)}>
                 {threat.level === 1 ? 'CRIT' : threat.level <= 3 ? 'HIGH' : 'LOW'}
               </span>
             </div>
@@ -180,7 +190,7 @@ export default function Home() {
               <span className="text-[10px] font-bold text-white tracking-widest uppercase font-mono">Signal Feed</span>
             </div>
 
-            <div className="space-y-0 overflow-y-auto pr-1 custom-scrollbar flex-1">
+            <div className="space-y-0 overflow-y-auto pr-1 no-scrollbar flex-1">
               {isLoading && events.length === 0 ? (
                 <div className="text-[10px] text-zinc-500 font-mono p-2">Initializing encryption layers...</div>
               ) : (
@@ -192,7 +202,7 @@ export default function Home() {
                   >
                     <div className="flex justify-between items-start pr-2">
                       {/* Dynamic Time & Category */}
-                      <div className="text-[9px] text-zinc-500 mb-0.5 font-mono truncate max-w-[70%]">
+                      <div className="text-[9px] text-zinc-500 mb-0.5 font-mono truncate max-w-[70%] tabular-nums tracking-tighter">
                         {new Date(Date.now() - item.updatedMinutesAgo * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} // {item.category}
                       </div>
 
@@ -221,6 +231,12 @@ export default function Home() {
 
         </div>
       </div>
+      <IntelModal
+        isOpen={showIntel}
+        onClose={() => setShowIntel(false)}
+        events={events}
+        defcon={threat.level}
+      />
     </main>
   );
 }
